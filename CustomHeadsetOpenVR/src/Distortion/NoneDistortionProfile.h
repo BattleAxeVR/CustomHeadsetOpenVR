@@ -11,7 +11,6 @@ public:
 	// vertical fov for the none distortion profile
 	float noneDistortionFovVertical = 100;
 
-
 	virtual void Initialize() override{};
 	
 	virtual void GetProjectionRaw(vr::EVREye eEye, float* pfLeft, float* pfRight, float* pfBottom, float* pfTop) override{
