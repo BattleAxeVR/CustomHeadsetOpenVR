@@ -89,7 +89,7 @@ public:
 	class MeganeX8KConfig{
 	public:
 		// if the MeganeX superlight 8K should be shimmed byt this driver
-		bool enable = true;
+		bool enable = false;
 		// ipd in mm
 		double ipd = 63.0;
 		// ipd offset from the ipd value in mm

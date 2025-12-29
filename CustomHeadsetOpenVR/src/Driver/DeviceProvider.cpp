@@ -6,6 +6,7 @@
 #include "Hooking/InterfaceHookInjector.h"
 
 #include "../Headsets/MeganeX8K.h"
+#include "../Headsets/PSVR2.h"
 #include "../Headsets/GenericHeadset.h"
 
 #include "../Config/ConfigLoader.h"
@@ -141,6 +142,14 @@ bool CustomHeadsetDeviceProvider::HandleDeviceAdded(const char *&pchDeviceSerial
 		// add more shims here, they can stack and none of the functions are particularly hot
 		// later shims can override earlier shims
 		// the PosTrackedDeviceActivate function will likely have enough information that you can decide if it is the device you want and can then set shimActive to false to deactivate the shim
+		
+		if(driverConfig.psvr2_config.enable)
+		{
+			PSVR2Shim* psvr2Shim = new PSVR2Shim();
+			psvr2Shim->deviceProvider = this;
+			shims.insert(psvr2Shim);
+			pDriver = new ShimTrackedDeviceDriver(psvr2Shim, pDriver);
+		}
 		
 		if(driverConfig.meganeX8K.enable){
 			MeganeX8KShim* meganeX8KShim = new MeganeX8KShim();
