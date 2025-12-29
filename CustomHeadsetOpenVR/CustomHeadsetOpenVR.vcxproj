@@ -28,6 +28,7 @@
     <ClInclude Include="src\Driver\Hooking\Hooking.h" />
     <ClInclude Include="src\Driver\Hooking\InterfaceHookInjector.h" />
     <ClInclude Include="src\Headsets\MeganeX8K.h" />
+    <ClInclude Include="src\Headsets\PSVR2.h" />
     <ClInclude Include="src\HiddenArea\HiddenArea.h" />
   </ItemGroup>
   <ItemGroup>
@@ -46,6 +47,7 @@
     <ClCompile Include="src\Driver\ShaderReplacement.cpp" />
     <ClCompile Include="src\Headsets\MeganeX8K.cpp" />
     <ClCompile Include="src\Headsets\GenericHeadset.cpp" />
+    <ClCompile Include="src\Headsets\PSVR2.cpp" />
     <ClCompile Include="src\Helpers\DisplayHelper.cpp" />
     <ClCompile Include="src\HiddenArea\HiddenArea.cpp" />
   </ItemGroup>
