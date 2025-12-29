@@ -9,7 +9,7 @@
 
 constexpr float kPi{ 3.1415926535897932384626433832795028841971693993751058209749445f };
 
-void PSVR2Shim::PosTrackedDeviceActivate(uint32_t &unObjectId, vr::EVRInitError &returnValue){
+void PSVR2Shim::PosTrackedDeviceActivate(uint32_t& unObjectId, vr::EVRInitError& returnValue) {
 	DriverLog("PosTrackedDeviceActivate");
 
 
@@ -18,7 +18,8 @@ void PSVR2Shim::PosTrackedDeviceActivate(uint32_t &unObjectId, vr::EVRInitError 
 
 	std::string modelNumber = vr::VRProperties()->GetStringProperty(container, vr::Prop_ModelNumber_String);
 	DriverLog("headset model: %s", modelNumber);
-	if(modelNumber != "Playstation VR2"){
+	if(modelNumber != "Playstation VR2")
+	{
 		// deactivate shim if this is not a PlayStation VR2
 		shimActive = false;
 		return;
@@ -28,8 +29,8 @@ void PSVR2Shim::PosTrackedDeviceActivate(uint32_t &unObjectId, vr::EVRInitError 
 	isActive = true;
 
 	// avoid "not fullscreen" warnings from vrmonitor
-	vr::VRProperties()->SetBoolProperty( container, vr::Prop_IsOnDesktop_Bool, !driverConfig.psvr2_config.directMode);
-	vr::VRProperties()->SetBoolProperty( container, vr::Prop_DisplayDebugMode_Bool, driverConfig.psvr2_config.directMode);
+	vr::VRProperties()->SetBoolProperty(container, vr::Prop_IsOnDesktop_Bool, !driverConfig.psvr2_config.directMode);
+	vr::VRProperties()->SetBoolProperty(container, vr::Prop_DisplayDebugMode_Bool, driverConfig.psvr2_config.directMode);
 
 	// I think this is already the default and produces true blacks
 	// vr::VRProperties()->SetFloatProperty( container, vr::Prop_DisplayGCBlackClamp_Float, 0.00f);
@@ -81,7 +82,8 @@ void PSVR2Shim::PosTrackedDeviceActivate(uint32_t &unObjectId, vr::EVRInitError 
 	// start collection of the context so we can send events later
 	deviceProvider->SendContextCollectionEvents(unObjectId);
 
-	if(!testThread.joinable()){
+	if(!testThread.joinable())
+	{
 		testThread = std::thread(&PSVR2Shim::TestThread, this);
 	}
 
@@ -96,7 +98,7 @@ void PSVR2Shim::PosTrackedDeviceDeactivate()
 }
 
 // defines the fov of the input image
-bool PSVR2Shim::PreDisplayComponentGetProjectionRaw(vr::EVREye &eEye, float *&pfLeft, float *&pfRight, float *&pfBottom, float *&pfTop)
+bool PSVR2Shim::PreDisplayComponentGetProjectionRaw(vr::EVREye& eEye, float*& pfLeft, float*& pfRight, float*& pfBottom, float*& pfTop)
 {
 	distortionProfileConstructor.profile->GetProjectionRaw(eEye, pfLeft, pfRight, pfBottom, pfTop);
 
@@ -112,22 +114,25 @@ bool PSVR2Shim::PreDisplayComponentGetProjectionRaw(vr::EVREye &eEye, float *&pf
 	{
 		*pfTop = *pfRight = 0.000001f;
 		*pfBottom = *pfLeft = -*pfTop;
-	}	
+	}
 	return false;
 }
 
 // run for each vertex of the distortion mesh and outputs the uv coordinates to sample for each color
-bool PSVR2Shim::PreDisplayComponentComputeDistortion(vr::EVREye &eEye, float &fU, float &fV, vr::DistortionCoordinates_t &coordinates){
+bool PSVR2Shim::PreDisplayComponentComputeDistortion(vr::EVREye& eEye, float& fU, float& fV, vr::DistortionCoordinates_t& coordinates) {
 
 	float minResolution = (float)std::min(driverConfig.psvr2_config.resolutionX, driverConfig.psvr2_config.resolutionY);
 	// change range to -1 to 1 for coverage of the minResolution square
 	fU = (fU - 0.5f) * 2.0f * driverConfig.psvr2_config.resolutionY / minResolution;
 	fV = (fV - 0.5f) * 2.0f * driverConfig.psvr2_config.resolutionX / minResolution;
-	if(eEye == vr::Eye_Left){
+	if(eEye == vr::Eye_Left)
+	{
 		float tmp = fU;
 		fU = -fV;
 		fV = tmp;
-	}else{
+	}
+	else
+	{
 		float tmp = fU;
 		fU = fV;
 		fV = -tmp;
@@ -143,10 +148,13 @@ bool PSVR2Shim::PreDisplayComponentComputeDistortion(vr::EVREye &eEye, float &fU
 	// the resolution is hardcoded here because the physical pixel sizes remain constant regardless of resolution
 	float subpixelOffset = (float)(driverConfig.psvr2_config.subpixelShift / 3552);
 	// if(testToggle){
-	if(eEye == vr::Eye_Left){
+	if(eEye == vr::Eye_Left)
+	{
 		redV -= subpixelOffset;
 		greenV += subpixelOffset;
-	}else{
+	}
+	else
+	{
 		redV += subpixelOffset;
 		greenV -= subpixelOffset;
 	}
@@ -158,12 +166,14 @@ bool PSVR2Shim::PreDisplayComponentComputeDistortion(vr::EVREye &eEye, float &fU
 	Point2D distortionGreen = distortionProfileConstructor.profile->ComputeDistortion(eEye, ColorChannelGreen, fU, greenV);
 	Point2D distortionBlue = distortionProfileConstructor.profile->ComputeDistortion(eEye, ColorChannelBlue, fU, fV);
 
-	if(eEye == vr::Eye_Left && driverConfig.psvr2_config.disableEye & 1){
+	if(eEye == vr::Eye_Left && driverConfig.psvr2_config.disableEye & 1)
+	{
 		// this will completely cull the render mesh
-		distortionRed = distortionGreen = distortionBlue = {-1, -1};
+		distortionRed = distortionGreen = distortionBlue = { -1, -1 };
 	}
-	if(eEye == vr::Eye_Right && driverConfig.psvr2_config.disableEye & 2){
-		distortionRed = distortionGreen = distortionBlue = {-1, -1};
+	if(eEye == vr::Eye_Right && driverConfig.psvr2_config.disableEye & 2)
+	{
+		distortionRed = distortionGreen = distortionBlue = { -1, -1 };
 	}
 
 	coordinates.rfRed[0] = distortionRed.x;
@@ -182,17 +192,17 @@ bool PSVR2Shim::PreDisplayComponentComputeDistortion(vr::EVREye &eEye, float &fU
 	return false;
 }
 
-bool PSVR2Shim::PreDisplayComponentIsDisplayOnDesktop(bool &returnValue){
+bool PSVR2Shim::PreDisplayComponentIsDisplayOnDesktop(bool& returnValue) {
 	returnValue = true;
 	return false;
 };
-bool PSVR2Shim::PreDisplayComponentIsDisplayRealDisplay(bool &returnValue){
+bool PSVR2Shim::PreDisplayComponentIsDisplayRealDisplay(bool& returnValue) {
 	returnValue = !driverConfig.psvr2_config.directMode;
 	return false;
 };
 
 // defined the resolution of the display or the size of the window when on the desktop
-bool PSVR2Shim::PreDisplayComponentGetWindowBounds(int32_t *&pnX, int32_t *&pnY, uint32_t *&pnWidth, uint32_t *&pnHeight){
+bool PSVR2Shim::PreDisplayComponentGetWindowBounds(int32_t*& pnX, int32_t*& pnY, uint32_t*& pnWidth, uint32_t*& pnHeight) {
 	*pnX = 0;
 	// *pnX = 3840 + 1080;
 	// *pnX = 3840 + 1080 + 1920;
@@ -204,7 +214,8 @@ bool PSVR2Shim::PreDisplayComponentGetWindowBounds(int32_t *&pnX, int32_t *&pnY,
 	*pnHeight = driverConfig.psvr2_config.resolutionX;
 	// *pnWidth = 5328;
 	// *pnHeight = 2880;
-	if(!driverConfig.psvr2_config.directMode){
+	if(!driverConfig.psvr2_config.directMode)
+	{
 		int edidVendorId = vr::VRProperties()->GetInt32Property(vr::VRProperties()->TrackedDeviceToPropertyContainer(0), vr::Prop_EdidVendorID_Int32);
 		int edidProductId = vr::VRProperties()->GetInt32Property(vr::VRProperties()->TrackedDeviceToPropertyContainer(0), vr::Prop_EdidProductID_Int32);
 		FindDisplayPosition(*pnWidth, *pnHeight, edidVendorId, edidProductId, pnX, pnY);
@@ -213,16 +224,19 @@ bool PSVR2Shim::PreDisplayComponentGetWindowBounds(int32_t *&pnX, int32_t *&pnY,
 }
 
 // define where each eye is drawn onto the output screen
-bool PSVR2Shim::PreDisplayComponentGetEyeOutputViewport(vr::EVREye &eEye, uint32_t *&pnX, uint32_t *&pnY, uint32_t *&pnWidth, uint32_t *&pnHeight){
+bool PSVR2Shim::PreDisplayComponentGetEyeOutputViewport(vr::EVREye& eEye, uint32_t*& pnX, uint32_t*& pnY, uint32_t*& pnWidth, uint32_t*& pnHeight) {
 	// X and Y from teh config are seemingly reversed here because the panels are rotated 90 degrees
-	if(eEye == vr::Eye_Left){
+	if(eEye == vr::Eye_Left)
+	{
 		*pnX = 0;
 		*pnY = 0;
 		// *pnY = (3840 - 3552) / 2;
 		*pnWidth = driverConfig.psvr2_config.resolutionY;
 		*pnHeight = driverConfig.psvr2_config.resolutionX;
 		// *pnHeight = 3552;
-	}else{
+	}
+	else
+	{
 		*pnX = driverConfig.psvr2_config.resolutionY;
 		*pnY = 0;
 		// *pnY = (3840 - 3552) / 2;
@@ -244,9 +258,9 @@ bool PSVR2Shim::PreDisplayComponentGetEyeOutputViewport(vr::EVREye &eEye, uint32
 	return false;
 };
 
-void PSVR2Shim::GetRecommendedRenderTargetSize(uint32_t* renderWidth, uint32_t* renderHeight){
+void PSVR2Shim::GetRecommendedRenderTargetSize(uint32_t* renderWidth, uint32_t* renderHeight) {
 	distortionProfileConstructor.GetRecommendedRenderTargetSize(renderWidth, renderHeight);
-	*renderWidth  = static_cast<uint32_t>(*renderWidth  * driverConfig.psvr2_config.renderResolutionMultiplierX);
+	*renderWidth = static_cast<uint32_t>(*renderWidth * driverConfig.psvr2_config.renderResolutionMultiplierX);
 	*renderHeight = static_cast<uint32_t>(*renderHeight * driverConfig.psvr2_config.renderResolutionMultiplierY);
 	// save to info
 	float projectionLeft, projectionRight, projectionTop, projectionBottom;
@@ -258,9 +272,9 @@ void PSVR2Shim::GetRecommendedRenderTargetSize(uint32_t* renderWidth, uint32_t* 
 	driverConfigLoader.info.renderResolution100PercentX = *renderWidth;
 	driverConfigLoader.info.renderResolution100PercentY = *renderHeight;
 	distortionProfileConstructor.profile->GetRecommendedRenderTargetSize(&driverConfigLoader.info.renderResolution1To1X, &driverConfigLoader.info.renderResolution1To1Y);
-	double requiredPercentX = (double)(driverConfigLoader.info.renderResolution1To1X * driverConfigLoader.info.renderResolution1To1X) / 
+	double requiredPercentX = (double)(driverConfigLoader.info.renderResolution1To1X * driverConfigLoader.info.renderResolution1To1X) /
 		(double)(driverConfigLoader.info.renderResolution100PercentX * driverConfigLoader.info.renderResolution100PercentX);
-	double requiredPercentY = (double)(driverConfigLoader.info.renderResolution1To1Y * driverConfigLoader.info.renderResolution1To1Y) / 
+	double requiredPercentY = (double)(driverConfigLoader.info.renderResolution1To1Y * driverConfigLoader.info.renderResolution1To1Y) /
 		(double)(driverConfigLoader.info.renderResolution100PercentY * driverConfigLoader.info.renderResolution100PercentY);
 	double requiredPercent = std::max(requiredPercentX, requiredPercentY);
 	driverConfigLoader.info.renderResolution1To1Percent = requiredPercent * 100.0;
@@ -273,27 +287,27 @@ void PSVR2Shim::GetRecommendedRenderTargetSize(uint32_t* renderWidth, uint32_t* 
 }
 
 // this is the 100% resolution in steamvr settings
-bool PSVR2Shim::PreDisplayComponentGetRecommendedRenderTargetSize(uint32_t* &pnWidth, uint32_t* &pnHeight){
+bool PSVR2Shim::PreDisplayComponentGetRecommendedRenderTargetSize(uint32_t*& pnWidth, uint32_t*& pnHeight) {
 	GetRecommendedRenderTargetSize(pnWidth, pnHeight);
 	return false;
 }
 
 // set ipd and adjust eye to head transform accordingly. ipd is in meters. angle it in radians
-void PSVR2Shim::SetIPD(float ipd, float angle){
+void PSVR2Shim::SetIPD(float ipd, float angle) {
 	vr::PropertyContainerHandle_t container = vr::VRProperties()->TrackedDeviceToPropertyContainer(0);
 	vr::VRProperties()->SetFloatProperty(container, vr::Prop_UserIpdMeters_Float, ipd);
 	float c = std::cos(angle);
 	float s = std::sin(angle);
-	vr::HmdMatrix34_t leftEye = {{
+	vr::HmdMatrix34_t leftEye = { {
 		{ c, 0, s, -ipd / 2.0f},
 		{ 0, 1, 0, 0},
 		{-s, 0, c, 0},
-		}};
-	vr::HmdMatrix34_t rightEye = {{
+		} };
+	vr::HmdMatrix34_t rightEye = { {
 		{c, 0, -s, ipd / 2.0f},
 		{0, 1,  0, 0},
 		{s, 0,  c, 0},
-		}};
+		} };
 	vr::VRServerDriverHost()->SetDisplayEyeToHead(0, leftEye, rightEye);
 }
 
@@ -302,7 +316,8 @@ void PSVR2Shim::RunFrame()
 {
 	double now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count() / 1000000000.0;
 	double frameTime = now - lastFrameTime;
-	if(lastFrameTime == 0){
+	if(lastFrameTime == 0)
+	{
 		lastFrameTime = now;
 		frameTime = 0;
 	}
@@ -315,7 +330,8 @@ void PSVR2Shim::RunFrame()
 
 		vr::PropertyContainerHandle_t container = vr::VRProperties()->TrackedDeviceToPropertyContainer(0);
 
-		if(driverConfig.psvr2_config.stationaryDimming.enable){
+		if(driverConfig.psvr2_config.stationaryDimming.enable)
+		{
 			vr::TrackedDevicePose_t hmdPos;
 			vr::VRServerDriverHost()->GetRawTrackedDevicePoses(0, &hmdPos, 1);
 			vr::HmdMatrix34_t rotation = hmdPos.mDeviceToAbsoluteTracking;
@@ -323,22 +339,28 @@ void PSVR2Shim::RunFrame()
 			double angle = std::acos((rotation.m[0][0] * lastMovementRotation.m[0][0] + rotation.m[1][0] * lastMovementRotation.m[1][0] + rotation.m[2][0] * lastMovementRotation.m[2][0] +
 				rotation.m[0][1] * lastMovementRotation.m[0][1] + rotation.m[1][1] * lastMovementRotation.m[1][1] + rotation.m[2][1] * lastMovementRotation.m[2][1] +
 				rotation.m[0][2] * lastMovementRotation.m[0][2] + rotation.m[1][2] * lastMovementRotation.m[1][2] + rotation.m[2][2] * lastMovementRotation.m[2][2] - 1) / 2.0) * 360.0 / 2.0 / kPi;
-			if(angle > driverConfig.psvr2_config.stationaryDimming.movementThreshold){
+			if(angle > driverConfig.psvr2_config.stationaryDimming.movementThreshold)
+			{
 				// moved past threshold
 				// DriverLog("angle: %f", angle);
 				lastMovementRotation = rotation;
 				lastMovementTime = now;
 			}
 			double dimmingAmount = 1 - driverConfig.psvr2_config.stationaryDimming.dimBrightnessPercent / 100.0;
-			if(lastMovementTime > now - driverConfig.psvr2_config.stationaryDimming.movementTime){
+			if(lastMovementTime > now - driverConfig.psvr2_config.stationaryDimming.movementTime)
+			{
 				// still moving
 				dimmingMultiplier += dimmingAmount / driverConfig.psvr2_config.stationaryDimming.brightenSeconds * frameTime;
-			}else{
+			}
+			else
+			{
 				// stationary
 				dimmingMultiplier -= dimmingAmount / driverConfig.psvr2_config.stationaryDimming.dimSeconds * frameTime;
 			}
 			dimmingMultiplier = std::max(driverConfig.psvr2_config.stationaryDimming.dimBrightnessPercent / 100.0, std::min(1.0, dimmingMultiplier));
-		}else{
+		}
+		else
+		{
 			dimmingMultiplier = 1;
 		}
 
@@ -353,8 +375,8 @@ void PSVR2Shim::RunFrame()
 		if(lastColorMultiplier.r != color.r || lastColorMultiplier.g != color.g || lastColorMultiplier.b != color.b)
 		{
 			lastColorMultiplier = color;
-			vr::VRProperties()->SetVec3Property(container, vr::Prop_DisplayColorMultLeft_Vector3, {(float)color.r, (float)color.g, (float)color.b});
-			vr::VRProperties()->SetVec3Property(container, vr::Prop_DisplayColorMultRight_Vector3, {(float)color.r, (float)color.g, (float)color.b});
+			vr::VRProperties()->SetVec3Property(container, vr::Prop_DisplayColorMultLeft_Vector3, { (float)color.r, (float)color.g, (float)color.b });
+			vr::VRProperties()->SetVec3Property(container, vr::Prop_DisplayColorMultRight_Vector3, { (float)color.r, (float)color.g, (float)color.b });
 		}
 
 
@@ -380,31 +402,32 @@ void PSVR2Shim::UpdateSettings()
 	vr::VRProperties()->SetFloatProperty(container, vr::Prop_SecondsFromPhotonsToVblank_Float, (float)driverConfig.psvr2_config.secondsFromPhotonsToVblank);
 
 	//bluetoothDevice
-	if(driverConfig.psvr2_config.bluetoothDevice == 1){
+	if(driverConfig.psvr2_config.bluetoothDevice == 1)
+	{
 		vr::VRProperties()->SetUint64Property(container, vr::Prop_AdditionalRadioFeatures_Uint64, vr::AdditionalRadioFeatures_HTCLinkBox);
 	}
 
-	if (driverConfig.psvr2_config.hiddenArea != driverConfigOld.psvr2_config.hiddenArea || driverConfigOld.psvr2_config.disableEye != driverConfig.psvr2_config.disableEye) 
+	if(driverConfig.psvr2_config.hiddenArea != driverConfigOld.psvr2_config.hiddenArea || driverConfigOld.psvr2_config.disableEye != driverConfig.psvr2_config.disableEye)
 	{
 		// This generally requires that you restart your game for it to update
-		for (auto meshType : { vr::k_eHiddenAreaMesh_Standard, vr::k_eHiddenAreaMesh_Inverse, vr::k_eHiddenAreaMesh_LineLoop }) 
+		for(auto meshType : { vr::k_eHiddenAreaMesh_Standard, vr::k_eHiddenAreaMesh_Inverse, vr::k_eHiddenAreaMesh_LineLoop })
 		{
-			vr::VRHiddenArea()->SetHiddenArea(vr::Eye_Left,  meshType, nullptr, 0);
+			vr::VRHiddenArea()->SetHiddenArea(vr::Eye_Left, meshType, nullptr, 0);
 			vr::VRHiddenArea()->SetHiddenArea(vr::Eye_Right, meshType, nullptr, 0);
 		}
 		// The compositor uses the LineLoop/Inverse mesh (depending on which is available),
 		// but I haven't been able to set those without causing issues for the compositor at boot.
 		// So for now we just set the Standard mesh that games seem to use (it's the one that matters for performance).
-		if (const auto& haConf = driverConfig.psvr2_config.hiddenArea; haConf.enable) 
+		if(const auto& haConf = driverConfig.psvr2_config.hiddenArea; haConf.enable)
 		{
-			for (auto meshType : { vr::k_eHiddenAreaMesh_Standard }) 
+			for(auto meshType : { vr::k_eHiddenAreaMesh_Standard })
 			{
-				for (auto eye : { vr::Eye_Left, vr::Eye_Right}) 
+				for(auto eye : { vr::Eye_Left, vr::Eye_Right })
 				{
 					auto mesh = HiddenArea::CreateHiddenAreaMesh(eye, meshType, haConf);
 					auto err = vr::VRHiddenArea()->SetHiddenArea(eye, meshType, mesh.data(), (uint32_t)mesh.size());
 
-					if (err != vr::TrackedProp_Success) 
+					if(err != vr::TrackedProp_Success)
 					{
 						DriverLog("Failed to setHiddenArea type %d with error %d", static_cast<int>(meshType), err);
 					}
@@ -413,12 +436,12 @@ void PSVR2Shim::UpdateSettings()
 		}
 		if(driverConfig.psvr2_config.disableEye & 1)
 		{
-			vr::HmdVector2_t coverMesh[] = {{0, 0}, {1, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 1}}; // cover the whole screen
+			vr::HmdVector2_t coverMesh[] = { {0, 0}, {1, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 1} }; // cover the whole screen
 			vr::VRHiddenArea()->SetHiddenArea(vr::Eye_Left, vr::k_eHiddenAreaMesh_Standard, coverMesh, 6);
 		}
 		if(driverConfig.psvr2_config.disableEye & 2)
 		{
-			vr::HmdVector2_t coverMesh[] = {{0, 0}, {1, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 1}}; // cover the whole screen
+			vr::HmdVector2_t coverMesh[] = { {0, 0}, {1, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 1} }; // cover the whole screen
 			vr::VRHiddenArea()->SetHiddenArea(vr::Eye_Right, vr::k_eHiddenAreaMesh_Standard, coverMesh, 6);
 		}
 	}
@@ -478,17 +501,20 @@ void PSVR2Shim::UpdateSettings()
 		distortionProfileConstructor.profile->GetProjectionRaw(vr::Eye_Left, &leftEyeLeft, &leftEyeRight, &leftEyeBottom, &leftEyeTop);
 		float rightEyeLeft, rightEyeRight, rightEyeTop, rightEyeBottom;
 		distortionProfileConstructor.profile->GetProjectionRaw(vr::Eye_Right, &rightEyeLeft, &rightEyeRight, &rightEyeBottom, &rightEyeTop);
-		if(driverConfig.psvr2_config.disableEye & 1 && driverConfig.psvr2_config.disableEyeDecreaseFov){
+		if(driverConfig.psvr2_config.disableEye & 1 && driverConfig.psvr2_config.disableEyeDecreaseFov)
+		{
 			leftEyeRight = leftEyeTop = 0.000001f;
 			leftEyeBottom = leftEyeLeft = -leftEyeTop;
 		}
-		if(driverConfig.psvr2_config.disableEye & 2 && driverConfig.psvr2_config.disableEyeDecreaseFov){
+		if(driverConfig.psvr2_config.disableEye & 2 && driverConfig.psvr2_config.disableEyeDecreaseFov)
+		{
 			rightEyeLeft = rightEyeTop = 0.000001f;
 			rightEyeBottom = rightEyeRight = -rightEyeTop;
 		}
-		vr::VRServerDriverHost()->SetDisplayProjectionRaw(0, vr::HmdRect2_t{{leftEyeLeft, leftEyeBottom}, {leftEyeRight, leftEyeTop}}, vr::HmdRect2_t{{rightEyeLeft, rightEyeBottom}, {rightEyeRight, rightEyeTop}});
+		vr::VRServerDriverHost()->SetDisplayProjectionRaw(0, vr::HmdRect2_t{ {leftEyeLeft, leftEyeBottom}, {leftEyeRight, leftEyeTop} }, vr::HmdRect2_t{ {rightEyeLeft, rightEyeBottom}, {rightEyeRight, rightEyeTop} });
 		// this requires reallocations so only do it when a finalization is not queued
-		if(!needsDistortionFinalization){
+		if(!needsDistortionFinalization)
+		{
 			// get max fov from the new profile
 			DistortionProfileConstructor maxFovConstructor = DistortionProfileConstructor();
 			maxFovConstructor.distortionSettings = distortionProfileConstructor.distortionSettings;
@@ -510,7 +536,7 @@ void PSVR2Shim::UpdateSettings()
 // a thread that is run every 5 seconds to test things with
 void PSVR2Shim::TestThread()
 {
-	while (isActive)
+	while(isActive)
 	{
 		testToggle = !testToggle;
 
