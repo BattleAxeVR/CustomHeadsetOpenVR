@@ -145,6 +145,67 @@ public:
 	};
 	// config for the MeganeX superlight 8K
 	MeganeX8KConfig meganeX8K;
+
+	class PSVR2Config
+	{
+	public:
+		// if the Playstation VR2 should be shimmed byt this driver
+		bool enable = true;
+		// ipd in mm
+		double ipd = 63.0;
+		// ipd offset from the ipd value in mm
+		double ipdOffset = 0.0;
+		// minimum black levels from 0 to 1
+		double blackLevel = 0;
+		// tint the display this color
+		Color colorMultiplier = {};
+		// distortion profile to use
+		std::string distortionProfile = "PSVR2 Default";
+		// amount to zoom in the distortion profile
+		double distortionZoom = 1.0;
+		// amount to zoom in the FOV, the fov is divided by this value
+		double fovZoom = 1.0;
+		// amount to shift the subpixels to account for their diffent rows
+		double subpixelShift = 0.33;
+		// width of one eye in pixels
+		int resolutionX = 2000;
+		// height of one eye in pixels
+		int resolutionY = 2040;
+		// max horizontal fov
+		double maxFovX = 116.0;
+		// max vertical fov
+		double maxFovY = 100.0;
+		// distortion mesh resolution
+		int distortionMeshResolution = 127;
+		// if the fov should be slightly adjusted each session to prevent sharp burn in along the edges
+		bool fovBurnInPrevention = true;
+		// multiply 100% render resolution width
+		double renderResolutionMultiplierX = 1.0;
+		// multiply 100% render resolution height
+		double renderResolutionMultiplierY = 1.0;
+		// percent of 1:1 resolution to apply the super sampling downscale filter at, this is really high to allow for subpixel sampling
+		double superSamplingFilterPercent = 500;
+		// seconds of latency to the display
+		double secondsFromVsyncToPhotons = 0.007;
+		// seconds from the the first to last line of the display
+		double secondsFromPhotonsToVblank = 0.0025;
+		// angle in degrees for each eye to be rotated outwards
+		double eyeRotation = 0.0;
+		// disable eyes as much as possible. 0:both enabled 1:left disabled 2:right disabled 3:both disabled
+		int disableEye = 0;
+		// if the fov should be decreased for the disabled eye, this causes problems in some apps
+		bool disableEyeDecreaseFov = false;
+		// which bluetooth device to use for SteamVR 0:none 1:vive
+		int bluetoothDevice = 0;
+		// if the display is in direct mode or false if it is on the desktop
+		bool directMode = true;
+		// Config struct for the hidden area mesh
+		HiddenAreaMeshConfig hiddenArea;
+		// config for dimming the display when stationary
+		StationaryDimmingConfig stationaryDimming = {};
+	};
+
+	PSVR2Config psvr2_config;
 	
 	CustomShaderConfig customShader = {};
 	

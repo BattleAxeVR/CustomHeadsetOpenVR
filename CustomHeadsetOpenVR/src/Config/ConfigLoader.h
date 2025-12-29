@@ -7,11 +7,12 @@
 // This class loads config files and watches for changes to them, updating the global config object as needed.
 class ConfigLoader{
 public:
-	enum HeadsetType{
+	enum HeadsetType {
 		None = 0,
 		Other = 1,
 		MeganeX8K = 2,
 		Vive = 3,
+		PSVR2 = 4
 	};
 	// class to contain info from elsewhere in the driver to write to info.json
 	// this is not structured in the same way as the json file so check WriteInfo in ConfigLoader.cpp

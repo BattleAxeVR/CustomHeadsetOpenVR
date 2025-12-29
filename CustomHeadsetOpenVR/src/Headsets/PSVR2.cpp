@@ -18,27 +18,28 @@ void PSVR2Shim::PosTrackedDeviceActivate(uint32_t &unObjectId, vr::EVRInitError 
 	
 	std::string modelNumber = vr::VRProperties()->GetStringProperty(container, vr::Prop_ModelNumber_String);
 	DriverLog("headset model: %s", modelNumber);
-	if(modelNumber != "MeganeX superlight 8K"){
-		// deactivate shim if this is not a MeganeX superlight 8K
+	if(modelNumber != "Playstation VR2"){
+		// deactivate shim if this is not a PlayStation VR2
 		shimActive = false;
 		return;
 	}
-	driverConfigLoader.info.connectedHeadset = ConfigLoader::HeadsetType::MeganeX8K;
+	driverConfigLoader.info.connectedHeadset = ConfigLoader::HeadsetType::PSVR2;
 	
 	isActive = true;
 
 	// avoid "not fullscreen" warnings from vrmonitor
-	vr::VRProperties()->SetBoolProperty( container, vr::Prop_IsOnDesktop_Bool, !driverConfig.meganeX8K.directMode);
-	vr::VRProperties()->SetBoolProperty( container, vr::Prop_DisplayDebugMode_Bool, driverConfig.meganeX8K.directMode);
+	vr::VRProperties()->SetBoolProperty( container, vr::Prop_IsOnDesktop_Bool, !driverConfig.psvr2_config.directMode);
+	vr::VRProperties()->SetBoolProperty( container, vr::Prop_DisplayDebugMode_Bool, driverConfig.psvr2_config.directMode);
 	
 	// I think this is already the default and produces true blacks
 	// vr::VRProperties()->SetFloatProperty( container, vr::Prop_DisplayGCBlackClamp_Float, 0.00f);
 	// vr::VRProperties()->SetFloatProperty( container, vr::Prop_DriverRequestedMuraCorrectionMode_Int32, vr::EVRMuraCorrectionMode_NoCorrection);
 	
-	
 	// Set EDID id
-	vr::VRProperties()->SetInt32Property(container, vr::Prop_EdidVendorID_Int32, 0xcc4c); // SFL megenex
-	if(!driverConfig.meganeX8K.directMode){
+	vr::VRProperties()->SetInt32Property(container, vr::Prop_EdidVendorID_Int32, 0xD94D);
+
+	if(!driverConfig.psvr2_config.directMode)
+	{
 		vr::VRProperties()->EraseProperty(container, vr::Prop_EdidVendorID_Int32);
 	}
 	vr::VRProperties()->EraseProperty(container, vr::Prop_EdidProductID_Int32);
@@ -48,6 +49,8 @@ void PSVR2Shim::PosTrackedDeviceActivate(uint32_t &unObjectId, vr::EVRInitError 
 	
 	// vr::VRProperties()->SetInt32Property(container, vr::Prop_EdidVendorID_Int32, 0xd222); // HVR htc vr
 	// vr::VRProperties()->SetInt32Property(container, vr::Prop_EdidProductID_Int32, 43521); // vive
+
+	// vr::VRProperties()->SetInt32Property(container, vr::Prop_EdidProductID_Int32, ???); // PSVR2
 	
 	// DSC does not need to be set manually but these are available
 	// vr::VRProperties()->SetInt32Property(container, vr::Prop_DSCVersion_Int32, 2);
@@ -58,22 +61,19 @@ void PSVR2Shim::PosTrackedDeviceActivate(uint32_t &unObjectId, vr::EVRInitError 
 	// vr::VRProperties()->SetBoolProperty(container, vr::Prop_Hmd_SupportsHDR10_Bool, true);
 	// vr::VRProperties()->SetBoolProperty(container, vr::Prop_Hmd_SupportsHDCP14LegacyCompat_Bool, false);
 	
-	
-	
 	// set ipd
 	// float ipd = vr::VRSettings()->GetFloat("driver_CustomHeadsetOpenVR", "ipd");
 	// SetIPD(ipd / 1000.0);
 	
 	
 	// vr::VRServerDriverHost()->SetRecommendedRenderTargetSize(unObjectId, 5000, 5000);
-	distortionProfileConstructor.distortionSettings.resolution = (float)std::min(driverConfig.meganeX8K.resolutionX, driverConfig.meganeX8K.resolutionY);
-	distortionProfileConstructor.distortionSettings.resolutionX = (float)driverConfig.meganeX8K.resolutionX;
-	distortionProfileConstructor.distortionSettings.resolutionY = (float)driverConfig.meganeX8K.resolutionY;
+	distortionProfileConstructor.distortionSettings.resolution = (float)std::min(driverConfig.psvr2_config.resolutionX, driverConfig.psvr2_config.resolutionY);
+	distortionProfileConstructor.distortionSettings.resolutionX = (float)driverConfig.psvr2_config.resolutionX;
+	distortionProfileConstructor.distortionSettings.resolutionY = (float)driverConfig.psvr2_config.resolutionY;
 	
 	// initialize random value for session
 	fovBurnInOffset = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() % 10000) / 10000.f * 3.f;
 	DriverLog("fovBurnInOffset: %f", fovBurnInOffset);
-	
 	
 	distortionProfileConstructor.distortionSettings.noneDistortionFovHorizontal = 95;
 	distortionProfileConstructor.distortionSettings.noneDistortionFovVertical = 95;
@@ -98,11 +98,11 @@ void PSVR2Shim::PosTrackedDeviceDeactivate(){
 bool PSVR2Shim::PreDisplayComponentGetProjectionRaw(vr::EVREye &eEye, float *&pfLeft, float *&pfRight, float *&pfBottom, float *&pfTop){
 	distortionProfileConstructor.profile->GetProjectionRaw(eEye, pfLeft, pfRight, pfBottom, pfTop);
 	DriverLog("PreDisplayComponentGetProjectionRaw %f %f %f %f", *pfLeft, *pfRight, *pfBottom, *pfTop);
-	if(eEye == vr::Eye_Left && driverConfig.meganeX8K.disableEye & 1 && driverConfig.meganeX8K.disableEyeDecreaseFov){
+	if(eEye == vr::Eye_Left && driverConfig.psvr2_config.disableEye & 1 && driverConfig.psvr2_config.disableEyeDecreaseFov){
 		*pfTop = *pfRight = 0.000001f;
 		*pfBottom = *pfLeft = -*pfTop;
 	}
-	if(eEye == vr::Eye_Right && driverConfig.meganeX8K.disableEye & 2 && driverConfig.meganeX8K.disableEyeDecreaseFov){
+	if(eEye == vr::Eye_Right && driverConfig.psvr2_config.disableEye & 2 && driverConfig.psvr2_config.disableEyeDecreaseFov){
 		*pfTop = *pfRight = 0.000001f;
 		*pfBottom = *pfLeft = -*pfTop;
 	}	
@@ -112,10 +112,10 @@ bool PSVR2Shim::PreDisplayComponentGetProjectionRaw(vr::EVREye &eEye, float *&pf
 // run for each vertex of the distortion mesh and outputs the uv coordinates to sample for each color
 bool PSVR2Shim::PreDisplayComponentComputeDistortion(vr::EVREye &eEye, float &fU, float &fV, vr::DistortionCoordinates_t &coordinates){
 
-	float minResolution = (float)std::min(driverConfig.meganeX8K.resolutionX, driverConfig.meganeX8K.resolutionY);
+	float minResolution = (float)std::min(driverConfig.psvr2_config.resolutionX, driverConfig.psvr2_config.resolutionY);
 	// change range to -1 to 1 for coverage of the minResolution square
-	fU = (fU - 0.5f) * 2.0f * driverConfig.meganeX8K.resolutionY / minResolution;
-	fV = (fV - 0.5f) * 2.0f * driverConfig.meganeX8K.resolutionX / minResolution;
+	fU = (fU - 0.5f) * 2.0f * driverConfig.psvr2_config.resolutionY / minResolution;
+	fV = (fV - 0.5f) * 2.0f * driverConfig.psvr2_config.resolutionX / minResolution;
 	if(eEye == vr::Eye_Left){
 		float tmp = fU;
 		fU = -fV;
@@ -126,15 +126,15 @@ bool PSVR2Shim::PreDisplayComponentComputeDistortion(vr::EVREye &eEye, float &fU
 		fV = -tmp;
 	}
 	
-	fU /= (float)driverConfig.meganeX8K.distortionZoom;
-	fV /= (float)driverConfig.meganeX8K.distortionZoom;
+	fU /= (float)driverConfig.psvr2_config.distortionZoom;
+	fV /= (float)driverConfig.psvr2_config.distortionZoom;
 	
 	float redV = fV;
 	float greenV = fV;
 	
 	// apply sub pixel offsets for super sampling
 	// the resolution is hardcoded here because the physical pixel sizes remain constant regardless of resolution
-	float subpixelOffset = (float)(driverConfig.meganeX8K.subpixelShift / 3552);
+	float subpixelOffset = (float)(driverConfig.psvr2_config.subpixelShift / 3552);
 	// if(testToggle){
 	if(eEye == vr::Eye_Left){
 		redV -= subpixelOffset;
@@ -151,11 +151,11 @@ bool PSVR2Shim::PreDisplayComponentComputeDistortion(vr::EVREye &eEye, float &fU
 	Point2D distortionGreen = distortionProfileConstructor.profile->ComputeDistortion(eEye, ColorChannelGreen, fU, greenV);
 	Point2D distortionBlue = distortionProfileConstructor.profile->ComputeDistortion(eEye, ColorChannelBlue, fU, fV);
 	
-	if(eEye == vr::Eye_Left && driverConfig.meganeX8K.disableEye & 1){
+	if(eEye == vr::Eye_Left && driverConfig.psvr2_config.disableEye & 1){
 		// this will completely cull the render mesh
 		distortionRed = distortionGreen = distortionBlue = {-1, -1};
 	}
-	if(eEye == vr::Eye_Right && driverConfig.meganeX8K.disableEye & 2){
+	if(eEye == vr::Eye_Right && driverConfig.psvr2_config.disableEye & 2){
 		distortionRed = distortionGreen = distortionBlue = {-1, -1};
 	}
 	
@@ -180,7 +180,7 @@ bool PSVR2Shim::PreDisplayComponentIsDisplayOnDesktop(bool &returnValue){
 	return false;
 };
 bool PSVR2Shim::PreDisplayComponentIsDisplayRealDisplay(bool &returnValue){
-	returnValue = !driverConfig.meganeX8K.directMode;
+	returnValue = !driverConfig.psvr2_config.directMode;
 	return false;
 };
 
@@ -193,11 +193,11 @@ bool PSVR2Shim::PreDisplayComponentGetWindowBounds(int32_t *&pnX, int32_t *&pnY,
 	// *pnWidth = 2160;
 	// *pnHeight = 1200;
 	// applies to direct mode as well
-	*pnWidth = driverConfig.meganeX8K.resolutionY * 2;
-	*pnHeight = driverConfig.meganeX8K.resolutionX;
+	*pnWidth = driverConfig.psvr2_config.resolutionY * 2;
+	*pnHeight = driverConfig.psvr2_config.resolutionX;
 	// *pnWidth = 5328;
 	// *pnHeight = 2880;
-	if(!driverConfig.meganeX8K.directMode){
+	if(!driverConfig.psvr2_config.directMode){
 		int edidVendorId = vr::VRProperties()->GetInt32Property(vr::VRProperties()->TrackedDeviceToPropertyContainer(0), vr::Prop_EdidVendorID_Int32);
 		int edidProductId = vr::VRProperties()->GetInt32Property(vr::VRProperties()->TrackedDeviceToPropertyContainer(0), vr::Prop_EdidProductID_Int32);
 		FindDisplayPosition(*pnWidth, *pnHeight, edidVendorId, edidProductId, pnX, pnY);
@@ -212,15 +212,15 @@ bool PSVR2Shim::PreDisplayComponentGetEyeOutputViewport(vr::EVREye &eEye, uint32
 		*pnX = 0;
 		*pnY = 0;
 		// *pnY = (3840 - 3552) / 2;
-		*pnWidth = driverConfig.meganeX8K.resolutionY;
-		*pnHeight = driverConfig.meganeX8K.resolutionX;
+		*pnWidth = driverConfig.psvr2_config.resolutionY;
+		*pnHeight = driverConfig.psvr2_config.resolutionX;
 		// *pnHeight = 3552;
 	}else{
-		*pnX = driverConfig.meganeX8K.resolutionY;
+		*pnX = driverConfig.psvr2_config.resolutionY;
 		*pnY = 0;
 		// *pnY = (3840 - 3552) / 2;
-		*pnWidth = driverConfig.meganeX8K.resolutionY;
-		*pnHeight = driverConfig.meganeX8K.resolutionX;
+		*pnWidth = driverConfig.psvr2_config.resolutionY;
+		*pnHeight = driverConfig.psvr2_config.resolutionX;
 		// *pnHeight = 3552;
 	}
 	// if(eEye == vr::Eye_Left){
@@ -239,8 +239,8 @@ bool PSVR2Shim::PreDisplayComponentGetEyeOutputViewport(vr::EVREye &eEye, uint32
 
 void PSVR2Shim::GetRecommendedRenderTargetSize(uint32_t* renderWidth, uint32_t* renderHeight){
 	distortionProfileConstructor.GetRecommendedRenderTargetSize(renderWidth, renderHeight);
-	*renderWidth  = static_cast<uint32_t>(*renderWidth  * driverConfig.meganeX8K.renderResolutionMultiplierX);
-	*renderHeight = static_cast<uint32_t>(*renderHeight * driverConfig.meganeX8K.renderResolutionMultiplierY);
+	*renderWidth  = static_cast<uint32_t>(*renderWidth  * driverConfig.psvr2_config.renderResolutionMultiplierX);
+	*renderHeight = static_cast<uint32_t>(*renderHeight * driverConfig.psvr2_config.renderResolutionMultiplierY);
 	// save to info
 	float projectionLeft, projectionRight, projectionTop, projectionBottom;
 	distortionProfileConstructor.profile->GetProjectionRaw(vr::Eye_Left, &projectionLeft, &projectionRight, &projectionBottom, &projectionTop);
@@ -261,8 +261,8 @@ void PSVR2Shim::GetRecommendedRenderTargetSize(uint32_t* renderWidth, uint32_t* 
 	
 	// write advanced super sampling resolution, this won't apply until the game is relaunched
 	vr::PropertyContainerHandle_t container = vr::VRProperties()->TrackedDeviceToPropertyContainer(0);
-	vr::VRProperties()->SetInt32Property(container, vr::Prop_Hmd_MaxDistortedTextureWidth_Int32, (int)(driverConfigLoader.info.renderResolution1To1X * std::sqrt(driverConfig.meganeX8K.superSamplingFilterPercent / 100.0)));
-	vr::VRProperties()->SetInt32Property(container, vr::Prop_Hmd_MaxDistortedTextureHeight_Int32, (int)(driverConfigLoader.info.renderResolution1To1Y * std::sqrt(driverConfig.meganeX8K.superSamplingFilterPercent / 100.0)));
+	vr::VRProperties()->SetInt32Property(container, vr::Prop_Hmd_MaxDistortedTextureWidth_Int32, (int)(driverConfigLoader.info.renderResolution1To1X * std::sqrt(driverConfig.psvr2_config.superSamplingFilterPercent / 100.0)));
+	vr::VRProperties()->SetInt32Property(container, vr::Prop_Hmd_MaxDistortedTextureHeight_Int32, (int)(driverConfigLoader.info.renderResolution1To1Y * std::sqrt(driverConfig.psvr2_config.superSamplingFilterPercent / 100.0)));
 }
 
 // this is the 100% resolution in steamvr settings
@@ -305,7 +305,7 @@ void PSVR2Shim::RunFrame(){
 		
 		vr::PropertyContainerHandle_t container = vr::VRProperties()->TrackedDeviceToPropertyContainer(0);
 	
-		if(driverConfig.meganeX8K.stationaryDimming.enable){
+		if(driverConfig.psvr2_config.stationaryDimming.enable){
 			vr::TrackedDevicePose_t hmdPos;
 			vr::VRServerDriverHost()->GetRawTrackedDevicePoses(0, &hmdPos, 1);
 			vr::HmdMatrix34_t rotation = hmdPos.mDeviceToAbsoluteTracking;
@@ -313,26 +313,26 @@ void PSVR2Shim::RunFrame(){
 			double angle = std::acos((rotation.m[0][0] * lastMovementRotation.m[0][0] + rotation.m[1][0] * lastMovementRotation.m[1][0] + rotation.m[2][0] * lastMovementRotation.m[2][0] +
 				rotation.m[0][1] * lastMovementRotation.m[0][1] + rotation.m[1][1] * lastMovementRotation.m[1][1] + rotation.m[2][1] * lastMovementRotation.m[2][1] +
 				rotation.m[0][2] * lastMovementRotation.m[0][2] + rotation.m[1][2] * lastMovementRotation.m[1][2] + rotation.m[2][2] * lastMovementRotation.m[2][2] - 1) / 2.0) * 360.0 / 2.0 / kPi;
-			if(angle > driverConfig.meganeX8K.stationaryDimming.movementThreshold){
+			if(angle > driverConfig.psvr2_config.stationaryDimming.movementThreshold){
 				// moved past threshold
 				// DriverLog("angle: %f", angle);
 				lastMovementRotation = rotation;
 				lastMovementTime = now;
 			}
-			double dimmingAmount = 1 - driverConfig.meganeX8K.stationaryDimming.dimBrightnessPercent / 100.0;
-			if(lastMovementTime > now - driverConfig.meganeX8K.stationaryDimming.movementTime){
+			double dimmingAmount = 1 - driverConfig.psvr2_config.stationaryDimming.dimBrightnessPercent / 100.0;
+			if(lastMovementTime > now - driverConfig.psvr2_config.stationaryDimming.movementTime){
 				// still moving
-				dimmingMultiplier += dimmingAmount / driverConfig.meganeX8K.stationaryDimming.brightenSeconds * frameTime;
+				dimmingMultiplier += dimmingAmount / driverConfig.psvr2_config.stationaryDimming.brightenSeconds * frameTime;
 			}else{
 				// stationary
-				dimmingMultiplier -= dimmingAmount / driverConfig.meganeX8K.stationaryDimming.dimSeconds * frameTime;
+				dimmingMultiplier -= dimmingAmount / driverConfig.psvr2_config.stationaryDimming.dimSeconds * frameTime;
 			}
-			dimmingMultiplier = std::max(driverConfig.meganeX8K.stationaryDimming.dimBrightnessPercent / 100.0, std::min(1.0, dimmingMultiplier));
+			dimmingMultiplier = std::max(driverConfig.psvr2_config.stationaryDimming.dimBrightnessPercent / 100.0, std::min(1.0, dimmingMultiplier));
 		}else{
 			dimmingMultiplier = 1;
 		}
 		
-		Config::Color color = driverConfig.meganeX8K.colorMultiplier;
+		Config::Color color = driverConfig.psvr2_config.colorMultiplier;
 		double brightness = 1;
 		// brightness *= std::sin(now) * 0.5 + 0.5;
 		brightness *= dimmingMultiplier;
@@ -365,18 +365,18 @@ void PSVR2Shim::UpdateSettings(){
 	
 	vr::PropertyContainerHandle_t container = vr::VRProperties()->TrackedDeviceToPropertyContainer(0);
 	
-	SetIPD((float)(driverConfig.meganeX8K.ipd + driverConfig.meganeX8K.ipdOffset) / 1000.f, (float)(driverConfig.meganeX8K.eyeRotation * kPi / 180.0f));
+	SetIPD((float)(driverConfig.psvr2_config.ipd + driverConfig.psvr2_config.ipdOffset) / 1000.f, (float)(driverConfig.psvr2_config.eyeRotation * kPi / 180.0f));
 
-	vr::VRProperties()->SetFloatProperty(container, vr::Prop_DisplayGCBlackClamp_Float, (float)driverConfig.meganeX8K.blackLevel);
-	vr::VRProperties()->SetFloatProperty(container, vr::Prop_SecondsFromVsyncToPhotons_Float, (float)driverConfig.meganeX8K.secondsFromVsyncToPhotons);
-	vr::VRProperties()->SetFloatProperty(container, vr::Prop_SecondsFromPhotonsToVblank_Float, (float)driverConfig.meganeX8K.secondsFromPhotonsToVblank);
+	vr::VRProperties()->SetFloatProperty(container, vr::Prop_DisplayGCBlackClamp_Float, (float)driverConfig.psvr2_config.blackLevel);
+	vr::VRProperties()->SetFloatProperty(container, vr::Prop_SecondsFromVsyncToPhotons_Float, (float)driverConfig.psvr2_config.secondsFromVsyncToPhotons);
+	vr::VRProperties()->SetFloatProperty(container, vr::Prop_SecondsFromPhotonsToVblank_Float, (float)driverConfig.psvr2_config.secondsFromPhotonsToVblank);
 	
 	//bluetoothDevice
-	if(driverConfig.meganeX8K.bluetoothDevice == 1){
+	if(driverConfig.psvr2_config.bluetoothDevice == 1){
 		vr::VRProperties()->SetUint64Property(container, vr::Prop_AdditionalRadioFeatures_Uint64, vr::AdditionalRadioFeatures_HTCLinkBox);
 	}
 
-	if (driverConfig.meganeX8K.hiddenArea != driverConfigOld.meganeX8K.hiddenArea || driverConfigOld.meganeX8K.disableEye != driverConfig.meganeX8K.disableEye) { // This generally requires that you restart your game for it to update
+	if (driverConfig.psvr2_config.hiddenArea != driverConfigOld.psvr2_config.hiddenArea || driverConfigOld.psvr2_config.disableEye != driverConfig.psvr2_config.disableEye) { // This generally requires that you restart your game for it to update
 		for (auto meshType : { vr::k_eHiddenAreaMesh_Standard, vr::k_eHiddenAreaMesh_Inverse, vr::k_eHiddenAreaMesh_LineLoop }) {
 			vr::VRHiddenArea()->SetHiddenArea(vr::Eye_Left,  meshType, nullptr, 0);
 			vr::VRHiddenArea()->SetHiddenArea(vr::Eye_Right, meshType, nullptr, 0);
@@ -384,7 +384,7 @@ void PSVR2Shim::UpdateSettings(){
 		// The compositor uses the LineLoop/Inverse mesh (depending on which is available),
 		// but I haven't been able to set those without causing issues for the compositor at boot.
 		// So for now we just set the Standard mesh that games seem to use (it's the one that matters for performance).
-		if (const auto& haConf = driverConfig.meganeX8K.hiddenArea; haConf.enable) {
+		if (const auto& haConf = driverConfig.psvr2_config.hiddenArea; haConf.enable) {
 			for (auto meshType : { vr::k_eHiddenAreaMesh_Standard }) {
 				for (auto eye : { vr::Eye_Left, vr::Eye_Right}) {
 					auto mesh = HiddenArea::CreateHiddenAreaMesh(eye, meshType, haConf);
@@ -395,47 +395,47 @@ void PSVR2Shim::UpdateSettings(){
 				}
 			}
 		}
-		if(driverConfig.meganeX8K.disableEye & 1){
+		if(driverConfig.psvr2_config.disableEye & 1){
 			vr::HmdVector2_t coverMesh[] = {{0, 0}, {1, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 1}}; // cover the whole screen
 			vr::VRHiddenArea()->SetHiddenArea(vr::Eye_Left, vr::k_eHiddenAreaMesh_Standard, coverMesh, 6);
 		}
-		if(driverConfig.meganeX8K.disableEye & 2){
+		if(driverConfig.psvr2_config.disableEye & 2){
 			vr::HmdVector2_t coverMesh[] = {{0, 0}, {1, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 1}}; // cover the whole screen
 			vr::VRHiddenArea()->SetHiddenArea(vr::Eye_Right, vr::k_eHiddenAreaMesh_Standard, coverMesh, 6);
 		}
 	}
 
 	
-	distortionProfileConstructor.distortionSettings.maxFovX = (float)driverConfig.meganeX8K.maxFovX;
-	distortionProfileConstructor.distortionSettings.maxFovY = (float)driverConfig.meganeX8K.maxFovY;
-	distortionProfileConstructor.distortionSettings.fovZoom = (float)driverConfig.meganeX8K.fovZoom;
-	if(driverConfig.meganeX8K.fovBurnInPrevention){
+	distortionProfileConstructor.distortionSettings.maxFovX = (float)driverConfig.psvr2_config.maxFovX;
+	distortionProfileConstructor.distortionSettings.maxFovY = (float)driverConfig.psvr2_config.maxFovY;
+	distortionProfileConstructor.distortionSettings.fovZoom = (float)driverConfig.psvr2_config.fovZoom;
+	if(driverConfig.psvr2_config.fovBurnInPrevention){
 		distortionProfileConstructor.distortionSettings.maxFovX += fovBurnInOffset;
 		distortionProfileConstructor.distortionSettings.maxFovY += fovBurnInOffset;
 	}
 	
 	
 	bool shouldReInitializeDistortion = false;
-	shouldReInitializeDistortion |= driverConfigOld.meganeX8K.maxFovX != driverConfig.meganeX8K.maxFovX;
-	shouldReInitializeDistortion |= driverConfigOld.meganeX8K.maxFovY != driverConfig.meganeX8K.maxFovY;
-	shouldReInitializeDistortion |= driverConfigOld.meganeX8K.fovZoom != driverConfig.meganeX8K.fovZoom;
-	shouldReInitializeDistortion |= driverConfigOld.meganeX8K.renderResolutionMultiplierX != driverConfig.meganeX8K.renderResolutionMultiplierX;
-	shouldReInitializeDistortion |= driverConfigOld.meganeX8K.renderResolutionMultiplierY != driverConfig.meganeX8K.renderResolutionMultiplierY;
-	shouldReInitializeDistortion |= driverConfigOld.meganeX8K.fovBurnInPrevention != driverConfig.meganeX8K.fovBurnInPrevention;
+	shouldReInitializeDistortion |= driverConfigOld.psvr2_config.maxFovX != driverConfig.psvr2_config.maxFovX;
+	shouldReInitializeDistortion |= driverConfigOld.psvr2_config.maxFovY != driverConfig.psvr2_config.maxFovY;
+	shouldReInitializeDistortion |= driverConfigOld.psvr2_config.fovZoom != driverConfig.psvr2_config.fovZoom;
+	shouldReInitializeDistortion |= driverConfigOld.psvr2_config.renderResolutionMultiplierX != driverConfig.psvr2_config.renderResolutionMultiplierX;
+	shouldReInitializeDistortion |= driverConfigOld.psvr2_config.renderResolutionMultiplierY != driverConfig.psvr2_config.renderResolutionMultiplierY;
+	shouldReInitializeDistortion |= driverConfigOld.psvr2_config.fovBurnInPrevention != driverConfig.psvr2_config.fovBurnInPrevention;
 	
 	std::lock_guard<std::mutex> lock(distortionProfileLock);
-	bool loadedNewDistortionProfile = distortionProfileConstructor.LoadDistortionProfile(driverConfig.meganeX8K.distortionProfile);
+	bool loadedNewDistortionProfile = distortionProfileConstructor.LoadDistortionProfile(driverConfig.psvr2_config.distortionProfile);
 	bool shouldUpdateDistortion = loadedNewDistortionProfile || shouldReInitializeDistortion;
-	shouldUpdateDistortion |= driverConfigOld.meganeX8K.distortionZoom != driverConfig.meganeX8K.distortionZoom;
-	shouldUpdateDistortion |= driverConfigOld.meganeX8K.subpixelShift != driverConfig.meganeX8K.subpixelShift;
-	shouldUpdateDistortion |= driverConfigOld.meganeX8K.distortionMeshResolution != driverConfig.meganeX8K.distortionMeshResolution;
-	shouldUpdateDistortion |= driverConfigOld.meganeX8K.disableEye != driverConfig.meganeX8K.disableEye;
-	shouldUpdateDistortion |= driverConfigOld.meganeX8K.disableEyeDecreaseFov != driverConfig.meganeX8K.disableEyeDecreaseFov;
+	shouldUpdateDistortion |= driverConfigOld.psvr2_config.distortionZoom != driverConfig.psvr2_config.distortionZoom;
+	shouldUpdateDistortion |= driverConfigOld.psvr2_config.subpixelShift != driverConfig.psvr2_config.subpixelShift;
+	shouldUpdateDistortion |= driverConfigOld.psvr2_config.distortionMeshResolution != driverConfig.psvr2_config.distortionMeshResolution;
+	shouldUpdateDistortion |= driverConfigOld.psvr2_config.disableEye != driverConfig.psvr2_config.disableEye;
+	shouldUpdateDistortion |= driverConfigOld.psvr2_config.disableEyeDecreaseFov != driverConfig.psvr2_config.disableEyeDecreaseFov;
 	shouldUpdateDistortion |= (now - lastDistortionChangeTime) > 0.5 && needsDistortionFinalization;
 
 	
-	vr::VRProperties()->SetInt32Property(container, vr::Prop_DistortionMeshResolution_Int32, std::min(1024, driverConfig.meganeX8K.distortionMeshResolution));
-	if(driverConfigOld.meganeX8K.superSamplingFilterPercent != driverConfig.meganeX8K.superSamplingFilterPercent){
+	vr::VRProperties()->SetInt32Property(container, vr::Prop_DistortionMeshResolution_Int32, std::min(1024, driverConfig.psvr2_config.distortionMeshResolution));
+	if(driverConfigOld.psvr2_config.superSamplingFilterPercent != driverConfig.psvr2_config.superSamplingFilterPercent){
 		uint32_t renderResolutionX, renderResolutionY;
 		GetRecommendedRenderTargetSize(&renderResolutionX, &renderResolutionY);
 	}
@@ -455,11 +455,11 @@ void PSVR2Shim::UpdateSettings(){
 		distortionProfileConstructor.profile->GetProjectionRaw(vr::Eye_Left, &leftEyeLeft, &leftEyeRight, &leftEyeBottom, &leftEyeTop);
 		float rightEyeLeft, rightEyeRight, rightEyeTop, rightEyeBottom;
 		distortionProfileConstructor.profile->GetProjectionRaw(vr::Eye_Right, &rightEyeLeft, &rightEyeRight, &rightEyeBottom, &rightEyeTop);
-		if(driverConfig.meganeX8K.disableEye & 1 && driverConfig.meganeX8K.disableEyeDecreaseFov){
+		if(driverConfig.psvr2_config.disableEye & 1 && driverConfig.psvr2_config.disableEyeDecreaseFov){
 			leftEyeRight = leftEyeTop = 0.000001f;
 			leftEyeBottom = leftEyeLeft = -leftEyeTop;
 		}
-		if(driverConfig.meganeX8K.disableEye & 2 && driverConfig.meganeX8K.disableEyeDecreaseFov){
+		if(driverConfig.psvr2_config.disableEye & 2 && driverConfig.psvr2_config.disableEyeDecreaseFov){
 			rightEyeLeft = rightEyeTop = 0.000001f;
 			rightEyeBottom = rightEyeRight = -rightEyeTop;
 		}
@@ -471,7 +471,7 @@ void PSVR2Shim::UpdateSettings(){
 			maxFovConstructor.distortionSettings = distortionProfileConstructor.distortionSettings;
 			maxFovConstructor.distortionSettings.maxFovX = 170;
 			maxFovConstructor.distortionSettings.maxFovY = 170;
-			maxFovConstructor.LoadDistortionProfile(driverConfig.meganeX8K.distortionProfile);
+			maxFovConstructor.LoadDistortionProfile(driverConfig.psvr2_config.distortionProfile);
 			maxFovConstructor.profile->GetProjectionRaw(vr::Eye_Left, &leftEyeLeft, &leftEyeRight, &leftEyeBottom, &leftEyeTop);
 			driverConfigLoader.info.renderFovMaxX = (std::atan(leftEyeRight) - std::atan(leftEyeLeft)) * 180.0 / kPi;
 			driverConfigLoader.info.renderFovMaxY = (std::atan(leftEyeTop) - std::atan(leftEyeBottom)) * 180.0 / kPi;
