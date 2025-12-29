@@ -9,9 +9,17 @@ export type DistortionProfileConfig = {
 };
 export type Settings = {
   watchDistortionProfiles: boolean,
-  meganeX8K: MeganeX8KConfig
+  meganeX8K: MeganeX8KConfig,
+  customShader: CustomShaderConfig
 }
-
+export type StationaryDimmingConfig = {
+  enable: boolean,
+  movementThreshold: number,
+  movementTime: number,
+  dimBrightnessPercent: number,
+  dimSeconds: number,
+  brightenSeconds: number
+}
 export type HiddenAreaMeshConfig = {
   /**
    * If hidden area meshes should be used.
@@ -43,6 +51,34 @@ export type HiddenAreaMeshConfig = {
    */
   radiusBottomOuter: number;
 };
+export type LinearColor = {
+  r: number;
+  g: number;
+  b: number;
+};
+export type CustomShaderConfig = {
+  enable: boolean;
+  enableForMeganeX8K: boolean,
+  enableForOther: boolean,
+  contrast: number;
+  contrastMidpoint: number;
+  contrastLinear: boolean;
+  contrastPerEye: boolean;
+  contrastPerEyeLinear: boolean;
+  contrastLeft: number;
+  contrastMidpointLeft: number;
+  contrastRight: number;
+  contrastMidpointRight: number;
+  chroma: number;
+  gamma: number;
+  subpixelShift: boolean;
+  disableMuraCorrection: boolean;
+  disableBlackLevels: boolean;
+  srgbColorCorrection: boolean;
+  srgbColorCorrectionMatrix: number[]; // 3x3 matrix as a flat array of 9 elements
+  lensColorCorrection: boolean;
+  dither10Bit: boolean;
+}
 
 export type MeganeX8KConfig = {
   /**
@@ -64,6 +100,8 @@ export type MeganeX8KConfig = {
    * minimum black levels from 0 to 1
    */
   blackLevel: number;
+  
+  colorMultiplier: LinearColor;
 
   /**
    * distortion profile to use
@@ -74,6 +112,8 @@ export type MeganeX8KConfig = {
    * amount to zoom in the distortion profile
    */
   distortionZoom: number;
+  
+  fovZoom: number;
 
   /**
    * amount to shift the subpixels to account for their different rows
@@ -95,8 +135,21 @@ export type MeganeX8KConfig = {
   renderResolutionMultiplierX: number;
 
   renderResolutionMultiplierY: number;
+  
+  superSamplingFilterPercent: number
+  
+  secondsFromVsyncToPhotons: number
+  
+  secondsFromPhotonsToVblank: number
+  
+  eyeRotation: number
+  
+  disableEye: number
+  
+  disableEyeDecreaseFov: number
 
   hiddenArea: HiddenAreaMeshConfig;
+  stationaryDimming: StationaryDimmingConfig;
 };
 
 export type AppSetting = {
@@ -113,6 +166,10 @@ export type DriverInfo = {
   driverVersion: string
 }
 export type ResolutionInfo = {
+  fovX: number,
+  fovY: number,
+  fovMaxX: number,
+  fovMaxY: number,
   renderResolution1To1X: number,
   renderResolution1To1Y: number,
   renderResolution1To1Percent: number,

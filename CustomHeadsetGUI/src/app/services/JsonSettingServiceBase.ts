@@ -1,8 +1,9 @@
 
-import { effect, Signal, signal } from '@angular/core';
+import { effect, inject, Signal, signal } from '@angular/core';
 import { exists, mkdir, readTextFile, watchImmediate, writeTextFile } from '@tauri-apps/plugin-fs';
 import { cleanJsonComments, DebouncedFileWriter, debouncedFileWriter, deepCopy, deepMerge } from '../helpers';
-import { debounceTime, Subject } from 'rxjs';
+import { debounceTime, delay, filter, Subject } from 'rxjs';
+import { AppSettingAccessor } from './AppSettingAccessor';
 export enum FileReadErrorReason {
     NotExists = 'File not exists',
     ParsingFailed = 'Parsing failed'
@@ -12,7 +13,7 @@ export type FileReadError = {
     message?: string
 }
 export abstract class JsonSettingServiceBase<T> {
-    protected _values = signal<T | undefined>(undefined,{ });
+    protected _values = signal<T | undefined>(undefined, {});
     public values = this._values.asReadonly();
     protected readonly debouncedFileWriter: DebouncedFileWriter;
     protected _initTask: Promise<void>;
@@ -31,8 +32,10 @@ export abstract class JsonSettingServiceBase<T> {
         private defaultValue: Signal<T | undefined>,
         private autoCreate: boolean,
         private watchFileforAutoReload: boolean) {
-        this.debouncedFileWriter = debouncedFileWriter(_filePath, _fileDir);
+        const appSettings = inject(AppSettingAccessor)
+        this.debouncedFileWriter = debouncedFileWriter(_filePath, _fileDir, () => appSettings.settings.updateMode == 'rewrite');
         this._initTask = this.init();
+
         effect(() => {
             this.defaults = (this.defaultValue() ?? {} as any)
             this.loadSetting()
@@ -47,8 +50,8 @@ export abstract class JsonSettingServiceBase<T> {
         }
         if (this.watchFileforAutoReload) {
             const watchSubject = new Subject<void>();
-            watchSubject.pipe(debounceTime(20)).subscribe(() => {
-                this.loadSetting();
+            watchSubject.pipe(filter(() => !this.debouncedFileWriter.isSavingFile()), debounceTime(50), delay(50)).subscribe(() => {
+                this.loadSetting()
             });
             watchImmediate(this._fileDir, ev => {
                 if (ev.paths.some(p => p == this._filePath)) {
@@ -61,24 +64,32 @@ export abstract class JsonSettingServiceBase<T> {
         }
 
     }
-
-    async loadSetting() {
-        if (await exists(this._filePath)) {
+    async loadSetting(): Promise<boolean> {
+        return await navigator.locks.request(`loadfile_${this._filePath}`, async () => {
             try {
-                const copiedDefaults = deepCopy(this.defaults);
-                this._values.set(deepMerge(copiedDefaults as any, JSON.parse(cleanJsonComments(await readTextFile(this._filePath)))));
-                this._readFileError.set(undefined);
+                if (await exists(this._filePath)) {
+                    try {
+                        const copiedDefaults = deepCopy(this.defaults);
+                        this._values.set(deepMerge(copiedDefaults as any, JSON.parse(cleanJsonComments(await readTextFile(this._filePath)))));
+                        this._readFileError.set(undefined);
+                        return true;
+                    } catch (e) {
+                        console.error('parsing setting error', this._filePath, e)
+                        this._readFileError.set({
+                            reason: FileReadErrorReason.ParsingFailed,
+                            message: `${e}`
+                        });
+                        this._values.set(undefined);
+                    }
+                } else {
+                    this._readFileError.set({ reason: FileReadErrorReason.NotExists });
+                    this._values.set(undefined)
+                }
             } catch (e) {
-                this._readFileError.set({
-                    reason: FileReadErrorReason.ParsingFailed,
-                    message: `${e}`
-                });
-                this._values.set(undefined);
+                console.error('load setting error', this._filePath, e);
             }
-        } else {
-            this._readFileError.set({ reason: FileReadErrorReason.NotExists });
-            this._values.set(undefined)
-        }
+            return false
+        });
     }
 
     async save(values: T) {

@@ -14,6 +14,10 @@
 4. run `npm run build` in `CustomHeadsetGUI`
 5. output to `..\output\CustomHeadsetGUI`
 
+## Localization
+Run `npx ng extract-i18n` to extract i18n strings.  
+Translations are located in `src/locale` folder.
+
 ## Project Structure
 
 ```
@@ -21,9 +25,18 @@ CustomeHeadsetGUI
 ├───public //angular static files
 ├───src //angular sources
 │    ├────app
-│    │     ├───dialogs  //dialog , all components opened using MatDialog in here
-│    │     ├───pages    //app pages,all tabs main components
-│    │     └───services //services,all injectable service
+│    │     ├───dialogs  //dialogs, all components opened using MatDialog in here
+│    │     ├───pages    //app pages, all tabs main components
+│    │     │    ├────devices //device configuration components
+│    │     │    │    ├────general //general device settings
+│    │     │    │    └────meganex-x8-k //Meganex X8-K specific settings
+│    │     │    └────... //other pages
+│    │     ├───services //services, all injectable service
+│    │     ├───utilities //utility components
+│    │     └───tauri_wrapper.ts // wrapper for native functions in js_api.rs
+│    ├────fonts //custom fonts
 │    └────locale //i18n strings
 └───src-tauri //tauri sources
+     └──src
+         └─js_api.rs // custom rust api for javascript
 ```

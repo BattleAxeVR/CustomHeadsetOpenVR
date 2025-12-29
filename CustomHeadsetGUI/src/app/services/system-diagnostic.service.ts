@@ -1,14 +1,15 @@
 import { computed, effect, Injectable, OnDestroy, signal } from '@angular/core';
-import { copyFile, exists, mkdir, readDir, readTextFile, watchImmediate, writeTextFile } from '@tauri-apps/plugin-fs';
+import { copyFile, remove, exists, mkdir, readDir, readTextFile, watchImmediate, writeTextFile } from '@tauri-apps/plugin-fs';
 import { appLocalDataDir, join } from '@tauri-apps/api/path';
 import { DriverSettingService } from './driver-setting.service';
 import { DriverInfoService } from './driver-info.service';
 import { debounceTime, Subject } from 'rxjs';
-import { get_executable_path } from '../tauri_wrapper';
+import { get_executable_path, restart_vrcompositor } from '../tauri_wrapper';
 import { open } from '@tauri-apps/plugin-dialog';
 import { DialogService } from './dialog.service';
 import { PullingService } from './PullingService';
 import { cleanJsonComments } from '../helpers';
+
 @Injectable({providedIn: "root", })
 export class SystemDiagnosticService implements OnDestroy {
   private _installingDriver = signal(false)
@@ -31,6 +32,7 @@ export class SystemDiagnosticService implements OnDestroy {
   constructor(public dss: DriverSettingService, public dis: DriverInfoService, private dialog: DialogService) {
     let readySetup = false
     effect(() => {
+      this.watchSteamVRSettings();
       const ready = this.systemReady()
       if (ready && !readySetup) {
         readySetup = true;
@@ -43,7 +45,7 @@ export class SystemDiagnosticService implements OnDestroy {
       await this.checkDriverInstalled()
     })();
   }
-  async readySetup() {
+  async watchSteamVRSettings(){
     const subject = new Subject<void>();
     const usub = subject.pipe(debounceTime(50)).subscribe(async () => {
       const value = await this.getSteamVRSettings();
@@ -60,6 +62,9 @@ export class SystemDiagnosticService implements OnDestroy {
       });
       subject.next()
     }
+  }
+  async readySetup() {
+    
   }
   ngOnDestroy(): void {
     for (const cfn of this.cleanUp) {
@@ -122,6 +127,7 @@ export class SystemDiagnosticService implements OnDestroy {
         settings[name] = {}
       }
       settings[name]['enable'] = true
+      delete settings[name]['blocked_by_safe_mode']
       return true;
     })
   }
@@ -129,7 +135,7 @@ export class SystemDiagnosticService implements OnDestroy {
     if (settings) {
       const driverSetting = settings[this.getDriverFieldName(driverName)]
       if (driverSetting) {
-        return driverSetting['enable'] ?? true
+        return (driverSetting['enable'] ?? true) && !(driverSetting['blocked_by_safe_mode'] ?? false);
       }
     }
     return true;
@@ -139,23 +145,23 @@ export class SystemDiagnosticService implements OnDestroy {
   }
   private installing = false
   async installDriver() {
-    if (this.installing) return;
+    if (this.installing) return false;
     const steamVrPath = this.steamVRinstalled();
-    if (!steamVrPath) return;
+    if (!steamVrPath) return false;
     this._installingDriver.set(true);
     this.installing = true
     try {
       let driverDir = await join(await get_executable_path(), '../CustomHeadsetOpenVR');
       if (!await exists(driverDir)) {
-        if (await this.dialog.confirm($localize`Driver folder not found`, $localize`driver folder not in default location`, $localize`Locate`, 'primary')) {
+        if (await this.dialog.confirm($localize`Driver folder not found`, $localize`The driver folder is not in the default location. Unpack the entire zip and retry, or manually locate the new CustomHeadsetOpenVR folder to be installed.`, $localize`Locate`, 'primary')) {
           const path = await open({ directory: true, multiple: false })
           if (path) {
             driverDir = path;
           } else {
-            return;
+            return false;
           }
         } else {
-          return;
+          return false;
         }
       }
       if (await exists(await join(driverDir, 'driver.vrdrivermanifest'))) {
@@ -167,20 +173,38 @@ export class SystemDiagnosticService implements OnDestroy {
         try {
           await this.copyRec(driverPath, driverDir)
         } catch (e) {
-          await this.dialog.message($localize`Install Failed`, `${e}`)
+          await this.dialog.message($localize`Install Failed, Make sure SteamVR is closed`, `${e}`)
+          return false
         }
         this.checkDriverInstalled()
+        return true;
       } else {
         await this.dialog.message($localize`Driver files not valid`, $localize`the folder seems not include driver file, please check again`)
+        return false;
       }
     } finally {
       if(!this.dss.values() || this.dss.values()?.meganeX8K?.enable){
         await this.disableSteamVRDriver('MeganeXSuperlight');
-        await this.enableSteamVRDriver('CustomHeadsetOpenVR');
       }
+      await this.enableSteamVRDriver('CustomHeadsetOpenVR');
       this.installing = false
       this._installingDriver.set(false)
     }
+  }
+  async uninstallDriver() {
+    const steamVrPath = this.steamVRinstalled();
+    if (!steamVrPath) return false;
+    const driverPath = await join(steamVrPath, 'drivers', 'CustomHeadsetOpenVR');
+    if (await exists(driverPath)) {
+      try{
+        await remove(driverPath, {recursive: true});
+      } catch(e){
+        await this.dialog.message($localize`Uninstall Failed, Make sure SteamVR is closed`, `${e}`)
+        return false;
+      }
+      this.checkDriverInstalled()
+    }
+    return true;
   }
   private async copyRec(targetDir: string, sourceDir: string) {
     if (!await exists(targetDir)) {
@@ -252,5 +276,8 @@ export class SystemDiagnosticService implements OnDestroy {
   }
   public async resetDriverSetting() {
     await writeTextFile(this.dss.filePath, "{}")
+  }
+  public async restartCompositor() {
+    return await restart_vrcompositor()
   }
 }

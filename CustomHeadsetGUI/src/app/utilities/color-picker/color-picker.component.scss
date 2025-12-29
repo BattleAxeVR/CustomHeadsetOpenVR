@@ -1,0 +1,147 @@
+@use '../../../simple-form.scss' as sf;
+
+:host {
+	--component-height: 2.3rem;
+	margin: 0.5rem 0;
+	display: flex;
+	position: relative;
+	align-items: stretch;
+
+	>div {
+		display: block;
+		position: relative;
+
+		&.control {
+			flex: 1 1 auto;
+		}
+
+		&.color-display {
+			display: block;
+			content: '';
+			width: 1.5rem;
+			border-radius: 0.5rem;
+			border: 0.1rem solid var(--mat-sys-outline);
+			background-color: rgb(var(--r), var(--g), var(--b));
+			margin: 0.25rem;
+		}
+	}
+
+}
+
+.color-picker-component {
+	height: var(--component-height);
+	display: flex;
+	align-items: center;
+	width: 100%;
+	position: relative;
+}
+
+.place-holder {
+	width: 8rem;
+	margin-right: 0.7rem;
+}
+
+.scale-container {
+	height: 0.5rem;
+	font-size: 80%;
+
+	.scale {
+		display: flex;
+		flex: 1 1 auto;
+		align-items: center;
+		margin: 0 -0.5rem;
+
+		.label {
+			width: 1.5rem;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.line {
+			border-top: 0.1rem solid var(--mat-sys-outline);
+			height: 0;
+			width: calc(30% - 1rem);
+		}
+
+		.dash {
+			border-top: 0.1rem dashed var(--mat-sys-outline);
+			height: 0;
+			flex: 1 1 auto;
+		}
+	}
+}
+
+.color-picker-label {
+	display: block;
+	position: absolute;
+	font-weight: bold;
+	left: 0;
+	top: calc((var(--component-height) - 1.8rem) / 2);
+	width: 1.1rem;
+
+	height: 1.8rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: var(--mat-sys-secondary-container);
+	border: 0.1rem solid var(--mat-sys-outline);
+	border-right: 0;
+	border-radius: 0.25rem 0 0 0.25rem;
+
+}
+
+
+input[type=number] {
+	@include sf.simpleInput();
+	width: 8rem;
+	font-size: 130%;
+	margin-right: 0.7rem;
+	text-align: right;
+	padding-left: 1.2rem;
+}
+
+input[type=range] {
+	height: 1.6rem;
+	vertical-align: middle;
+	appearance: none;
+	-webkit-appearance: none;
+	border: 0.1rem solid var(--mat-sys-outline);
+	flex: 1 1 auto;
+	border-radius: 0.4rem;
+}
+
+input[type=range]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 1.5em;
+	height: 1.5em;
+	background: #eaeaea;
+	cursor: pointer;
+	border: 0.15rem solid #333;
+	border-radius: 0.4rem;
+}
+
+.slider-red {
+	background: linear-gradient(to right, #000000, #ff0000, #ffaaaa);
+}
+
+.slider-green {
+	background: linear-gradient(to right, #000000, #00ff00, #aaffaa);
+}
+
+.slider-blue {
+	background: linear-gradient(to right, #000000, #0000ff, #aaaaff);
+}
+
+.slider-hue {
+	background: linear-gradient(to right, rgb(255, 0, 0) 0%, rgb(255, 255, 0) 16.66%, rgb(0, 255, 0) 33.33%, rgb(0, 255, 255) 50%, rgb(0, 0, 255) 66.66%, rgb(255, 0, 255) 83.33%, rgb(255, 0, 0) 100%);
+}
+
+.slider-saturation {
+	background: linear-gradient(to right, #ffffff, rgb(var(--color-saturated-r), var(--color-saturated-g), var(--color-saturated-b)));
+}
+
+.slider-brightness {
+	background: linear-gradient(to right, #000000, #ffffff, #ffffff, #ffffff);
+}

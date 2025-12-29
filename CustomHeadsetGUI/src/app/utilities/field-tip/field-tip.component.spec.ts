@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { BasicSettingsComponent } from './basic-settings.component';
+import { FieldTipComponent } from './field-tip.component';
 
-describe('BasicSettingsComponent', () => {
-  let component: BasicSettingsComponent;
-  let fixture: ComponentFixture<BasicSettingsComponent>;
+describe('FieldTipComponent', () => {
+  let component: FieldTipComponent;
+  let fixture: ComponentFixture<FieldTipComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [BasicSettingsComponent]
+      imports: [FieldTipComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(BasicSettingsComponent);
+    fixture = TestBed.createComponent(FieldTipComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -1,4 +1,4 @@
-import { Component, effect, ElementRef, input, viewChild, HostListener, signal } from '@angular/core';
+import { Component, effect, ElementRef, input, viewChild, signal, OnDestroy } from '@angular/core';
 import { PathsService } from '../../services/paths.service';
 import { exists, readTextFile } from '@tauri-apps/plugin-fs';
 import { cleanJsonComments } from '../../helpers';
@@ -9,35 +9,44 @@ import { DistortionProfileConfig } from '../../services/JsonFileDefines';
   templateUrl: './distortion-profile-viewer.component.html',
   styleUrls: ['./distortion-profile-viewer.component.scss']
 })
-export class DistortionProfileViewerComponent {
+export class DistortionProfileViewerComponent implements OnDestroy {
   meganeXDefault = [
-    [0.0, 0.0],
-    [10.0, 24.7],
-    [20.0, 48.0],
-    [30.0, 69.6],
-    [35.0, 79.9],
-    [40.0, 89.06],
-    [45.0, 96.3],
-    [48.3073, 100.0],
+    [0.00000, 0.0],
+    [5.00000, 12.463],
+    [10.0000, 24.750],
+    [15.00000, 36.665],
+    [20.00000, 48.103],
+    [25.00000, 59.093],
+    [30.00000, 69.749],
+    [35.00000, 79.994],
+    [40.00000, 89.147],
+    [45.00000, 96.357],
+    [48.30730, 100.0]
   ];
 
-  meganeXOriginal = [
-    [0.0, 0.0],
-    [10.0, 24.77952472],
-    [20.0, 48.32328161],
-    [30.0, 69.9136628],
-    [35.0, 79.99462488],
-    [40.0, 89.06057112],
-    [45.0, 96.29634484],
-    [48.3073, 100.0],
-  ];
+  // meganeXOriginal = [
+  //   [0.0, 0.0],
+  //   [10.0, 24.77952472],
+  //   [20.0, 48.32328161],
+  //   [30.0, 69.9136628],
+  //   [35.0, 79.99462488],
+  //   [40.0, 89.06057112],
+  //   [45.0, 96.29634484],
+  //   [48.3073, 100.0],
+  // ];
   profiles = input<string[]>()
   windowSize = signal<{ width: number, height: number } | undefined>(undefined);
   canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+
+  private resizeObserver: ResizeObserver;
   constructor(private pathsService: PathsService, host: ElementRef<HTMLElement>) {
     let width = 0, height = 0;
     const colors = ['green', 'orange', 'blueviolet', 'deeppink']
     const profileData = signal<DistortionProfileConfig[]>([]);
+    this.resizeObserver = new ResizeObserver(() => {
+      this.windowSize.set({ width: window.innerWidth, height: window.innerHeight });
+    })
+    this.resizeObserver.observe(host.nativeElement)
     effect(async () => {
       const profiles = this.profiles()
       let newData: DistortionProfileConfig[] = []
@@ -60,13 +69,6 @@ export class DistortionProfileViewerComponent {
       }
       profileData.set(newData);
     });
-    setTimeout(() => {
-      this.onResize()
-    }, 50);
-    setTimeout(() => {
-      // sometimes the labels are too large but can be fixed by running again later
-      this.onResize()
-    }, 200);
     effect(() => {
       let curveIdx = 0;
       const canvas = this.canvasRef().nativeElement;
@@ -82,8 +84,8 @@ export class DistortionProfileViewerComponent {
       const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
       this.drawPoints(canvas, ctx, this.smoothPoints(this.meganeXDefault, 20), 'red', 'meganeX Default', curveIdx);
       curveIdx++;
-      this.drawPoints(canvas, ctx, this.smoothPoints(this.meganeXOriginal, 20), 'blue', 'meganeX Original', curveIdx);
-      curveIdx++;
+      // this.drawPoints(canvas, ctx, this.smoothPoints(this.meganeXOriginal, 20), 'blue', 'meganeX Original', curveIdx);
+      // curveIdx++;
       const data = profileData();
       for (const obj of data) {
         this.drawPoints(canvas, ctx, this.smoothPoints(this.chunkArrayInPairs(obj.distortions), 20), colors[(curveIdx - 2) % colors.length], obj.name, curveIdx);
@@ -92,9 +94,8 @@ export class DistortionProfileViewerComponent {
     });
 
   }
-  @HostListener('window:resize')
-  onResize() {
-    this.windowSize.set({ width: window.innerWidth, height: window.innerHeight });
+  ngOnDestroy(): void {
+    this.resizeObserver.disconnect()
   }
   chunkArrayInPairs(arr: number[]): number[][] {
     const result: number[][] = [];

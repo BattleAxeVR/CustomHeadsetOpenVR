@@ -5,12 +5,14 @@
 #include <filesystem>
 #include "nlohmann/json.hpp"
 #include "../Driver/DriverLog.h"
+#include "../Distortion/DistortionProfileConstructor.h"
 #include "Windows.h"
 
 
 
 using json = nlohmann::json;
 using ordered_json = nlohmann::ordered_json;
+
 
 std::string ConfigLoader::GetConfigFolder(){
 	char* appdataPath = std::getenv("APPDATA");
@@ -50,11 +52,20 @@ void ConfigLoader::ParseConfig(){
 			if(meganeX8KData["blackLevel"].is_number()){
 				newConfig.meganeX8K.blackLevel = meganeX8KData["blackLevel"].get<double>();
 			}
+			if(meganeX8KData["colorMultiplier"].is_object()){
+				Config::Color &colorMultiplier = newConfig.meganeX8K.colorMultiplier;
+				if(meganeX8KData["colorMultiplier"]["r"].is_number()){ colorMultiplier.r = meganeX8KData["colorMultiplier"]["r"].get<double>(); }
+				if(meganeX8KData["colorMultiplier"]["g"].is_number()){ colorMultiplier.g = meganeX8KData["colorMultiplier"]["g"].get<double>(); }
+				if(meganeX8KData["colorMultiplier"]["b"].is_number()){ colorMultiplier.b = meganeX8KData["colorMultiplier"]["b"].get<double>(); }
+			}
 			if(meganeX8KData["distortionProfile"].is_string()){
 				newConfig.meganeX8K.distortionProfile = meganeX8KData["distortionProfile"].get<std::string>();
 			}
 			if(meganeX8KData["distortionZoom"].is_number()){
 				newConfig.meganeX8K.distortionZoom = meganeX8KData["distortionZoom"].get<double>();
+			}
+			if(meganeX8KData["fovZoom"].is_number()){
+				newConfig.meganeX8K.fovZoom = meganeX8KData["fovZoom"].get<double>();
 			}
 			if(meganeX8KData["subpixelShift"].is_number()){
 				newConfig.meganeX8K.subpixelShift = meganeX8KData["subpixelShift"].get<double>();
@@ -83,6 +94,31 @@ void ConfigLoader::ParseConfig(){
 			if(meganeX8KData["renderResolutionMultiplierY"].is_number()){
 				newConfig.meganeX8K.renderResolutionMultiplierY = meganeX8KData["renderResolutionMultiplierY"].get<double>();
 			}
+			if(meganeX8KData["superSamplingFilterPercent"].is_number()){
+				newConfig.meganeX8K.superSamplingFilterPercent = meganeX8KData["superSamplingFilterPercent"].get<double>();
+			}
+			if(meganeX8KData["secondsFromVsyncToPhotons"].is_number()){
+				newConfig.meganeX8K.secondsFromVsyncToPhotons = meganeX8KData["secondsFromVsyncToPhotons"].get<double>();
+			}
+			if(meganeX8KData["secondsFromPhotonsToVblank"].is_number()){
+				newConfig.meganeX8K.secondsFromPhotonsToVblank = meganeX8KData["secondsFromPhotonsToVblank"].get<double>();
+			}
+			if(meganeX8KData["eyeRotation"].is_number()){
+				newConfig.meganeX8K.eyeRotation = meganeX8KData["eyeRotation"].get<double>();
+			}
+			if(meganeX8KData["disableEye"].is_number()){
+				newConfig.meganeX8K.disableEye = meganeX8KData["disableEye"].get<int>();
+			}
+			if(meganeX8KData["disableEyeDecreaseFov"].is_boolean()){
+				newConfig.meganeX8K.disableEyeDecreaseFov = meganeX8KData["disableEyeDecreaseFov"].get<bool>();
+			}
+			if(meganeX8KData["bluetoothDevice"].is_number()){
+				newConfig.meganeX8K.bluetoothDevice = meganeX8KData["bluetoothDevice"].get<int>();
+			}
+			if(meganeX8KData["directMode"].is_boolean()){
+				newConfig.meganeX8K.directMode = meganeX8KData["directMode"].get<bool>();
+			}
+			
 			if(json& hiddenAreaJson = meganeX8KData["hiddenArea"]; hiddenAreaJson.is_object()){
 				auto& newHiddenArea = newConfig.meganeX8K.hiddenArea;
 				if(hiddenAreaJson["enable"].is_boolean()){ newHiddenArea.enable = hiddenAreaJson["enable"].get<bool>(); }
@@ -93,15 +129,94 @@ void ConfigLoader::ParseConfig(){
 				if(hiddenAreaJson["radiusBottomInner"].is_number()){ newHiddenArea.radiusBottomInner = hiddenAreaJson["radiusBottomInner"].get<double>(); }
 				if(hiddenAreaJson["radiusBottomOuter"].is_number()){ newHiddenArea.radiusBottomOuter = hiddenAreaJson["radiusBottomOuter"].get<double>(); }
 			}
+			if(json& stationaryDimmingJson = meganeX8KData["stationaryDimming"]; stationaryDimmingJson.is_object()){
+				auto& newStationaryDimming = newConfig.meganeX8K.stationaryDimming;
+				if(stationaryDimmingJson["enable"].is_boolean()){ newStationaryDimming.enable = stationaryDimmingJson["enable"].get<bool>(); }
+				if(stationaryDimmingJson["movementThreshold"].is_number()){ newStationaryDimming.movementThreshold = stationaryDimmingJson["movementThreshold"].get<double>(); }
+				if(stationaryDimmingJson["movementTime"].is_number()){ newStationaryDimming.movementTime = stationaryDimmingJson["movementTime"].get<double>(); }
+				if(stationaryDimmingJson["dimBrightnessPercent"].is_number()){ newStationaryDimming.dimBrightnessPercent = stationaryDimmingJson["dimBrightnessPercent"].get<double>(); }
+				if(stationaryDimmingJson["dimSeconds"].is_number()){ newStationaryDimming.dimSeconds = stationaryDimmingJson["dimSeconds"].get<double>(); }
+				if(stationaryDimmingJson["brightenSeconds"].is_number()){ newStationaryDimming.brightenSeconds = stationaryDimmingJson["brightenSeconds"].get<double>(); }
+			}
+		}
+		if(data["customShader"].is_object()){
+			json customShaderData = data["customShader"];
+			if(customShaderData["enable"].is_boolean()){
+				newConfig.customShader.enable = customShaderData["enable"].get<bool>();
+			}
+			if(customShaderData["enableForMeganeX8K"].is_boolean()){
+				newConfig.customShader.enableForMeganeX8K = customShaderData["enableForMeganeX8K"].get<bool>();
+			}
+			if(customShaderData["enableForOther"].is_boolean()){
+				newConfig.customShader.enableForOther = customShaderData["enableForOther"].get<bool>();
+			}
+			if(customShaderData["contrast"].is_number()){
+				newConfig.customShader.contrast = customShaderData["contrast"].get<double>();
+			}
+			if(customShaderData["contrastMidpoint"].is_number()){
+				newConfig.customShader.contrastMidpoint = customShaderData["contrastMidpoint"].get<double>();
+			}
+			if(customShaderData["contrastLinear"].is_boolean()){
+				newConfig.customShader.contrastLinear = customShaderData["contrastLinear"].get<bool>();
+			}
+			if(customShaderData["contrastPerEye"].is_boolean()){
+				newConfig.customShader.contrastPerEye = customShaderData["contrastPerEye"].get<bool>();
+			}
+			if(customShaderData["contrastPerEyeLinear"].is_boolean()){
+				newConfig.customShader.contrastPerEyeLinear = customShaderData["contrastPerEyeLinear"].get<bool>();
+			}
+			if(customShaderData["contrastLeft"].is_number()){
+				newConfig.customShader.contrastLeft = customShaderData["contrastLeft"].get<double>();
+			}
+			if(customShaderData["contrastMidpointLeft"].is_number()){
+				newConfig.customShader.contrastMidpointLeft = customShaderData["contrastMidpointLeft"].get<double>();
+			}
+			if(customShaderData["contrastRight"].is_number()){
+				newConfig.customShader.contrastRight = customShaderData["contrastRight"].get<double>();
+			}
+			if(customShaderData["contrastMidpointRight"].is_number()){
+				newConfig.customShader.contrastMidpointRight = customShaderData["contrastMidpointRight"].get<double>();
+			}
+			if(customShaderData["chroma"].is_number()){
+				newConfig.customShader.chroma = customShaderData["chroma"].get<double>();
+			}
+			if(customShaderData["gamma"].is_number()){
+				newConfig.customShader.gamma = customShaderData["gamma"].get<double>();
+			}
+			if(customShaderData["subpixelShift"].is_boolean()){
+				newConfig.customShader.subpixelShift = customShaderData["subpixelShift"].get<bool>();
+			}
+			if(customShaderData["disableMuraCorrection"].is_boolean()){
+				newConfig.customShader.disableMuraCorrection = customShaderData["disableMuraCorrection"].get<bool>();
+			}
+			if(customShaderData["disableBlackLevels"].is_boolean()){
+				newConfig.customShader.disableBlackLevels = customShaderData["disableBlackLevels"].get<bool>();
+			}
+			if(customShaderData["srgbColorCorrection"].is_boolean()){
+				newConfig.customShader.srgbColorCorrection = customShaderData["srgbColorCorrection"].get<bool>();
+			}
+			if(customShaderData["srgbColorCorrectionMatrix"].is_array()){
+				newConfig.customShader.srgbColorCorrectionMatrix = customShaderData["srgbColorCorrectionMatrix"].get<std::vector<double>>();
+			}
+			if(customShaderData["lensColorCorrection"].is_boolean()){
+				newConfig.customShader.lensColorCorrection = customShaderData["lensColorCorrection"].get<bool>();
+			}
+			if(customShaderData["dither10Bit"].is_boolean()){
+				newConfig.customShader.dither10Bit = customShaderData["dither10Bit"].get<bool>();
+			}
+		}
+		if(data["forceTracking"].is_boolean()){
+			newConfig.forceTracking = data["forceTracking"].get<bool>();
 		}
 		// if(data["watchDistortionProfiles"].is_boolean()){
 		// 	newConfig.watchDistortionProfiles = data["watchDistortionProfiles"].get<bool>();
 		// }
 		// write to global config
-		driverConfigLock.lock();
-		driverConfigOld = driverConfig;
-		driverConfig = newConfig;
-		driverConfigLock.unlock();
+		{
+			std::lock_guard<std::mutex> lock(driverConfigLock);
+			driverConfigOld = driverConfig;
+			driverConfig = newConfig;
+		}
 	}catch(const std::exception& e){
 		DriverLog("Failed to parse config file: %s", e.what());
 		return;
@@ -164,8 +279,14 @@ void ConfigLoader::WriteInfo(){
 				{"ipd", defaultSettings.meganeX8K.ipd},
 				{"ipdOffset", defaultSettings.meganeX8K.ipdOffset},
 				{"blackLevel", defaultSettings.meganeX8K.blackLevel},
+				{"colorMultiplier", {
+					{"r", defaultSettings.meganeX8K.colorMultiplier.r},
+					{"g", defaultSettings.meganeX8K.colorMultiplier.g},
+					{"b", defaultSettings.meganeX8K.colorMultiplier.b},
+				}},
 				{"distortionProfile", defaultSettings.meganeX8K.distortionProfile},
 				{"distortionZoom", defaultSettings.meganeX8K.distortionZoom},
+				{"fovZoom", defaultSettings.meganeX8K.fovZoom},
 				{"subpixelShift", defaultSettings.meganeX8K.subpixelShift},
 				{"resolutionX", defaultSettings.meganeX8K.resolutionX},
 				{"resolutionY", defaultSettings.meganeX8K.resolutionY},
@@ -175,6 +296,14 @@ void ConfigLoader::WriteInfo(){
 				{"fovBurnInPrevention", defaultSettings.meganeX8K.fovBurnInPrevention},
 				{"renderResolutionMultiplierX", defaultSettings.meganeX8K.renderResolutionMultiplierX},
 				{"renderResolutionMultiplierY", defaultSettings.meganeX8K.renderResolutionMultiplierY},
+				{"superSamplingFilterPercent", defaultSettings.meganeX8K.superSamplingFilterPercent},
+				{"secondsFromVsyncToPhotons", defaultSettings.meganeX8K.secondsFromVsyncToPhotons},
+				{"secondsFromPhotonsToVblank", defaultSettings.meganeX8K.secondsFromPhotonsToVblank},
+				{"eyeRotation", defaultSettings.meganeX8K.eyeRotation},
+				{"disableEye", defaultSettings.meganeX8K.disableEye},
+				{"disableEyeDecreaseFov", defaultSettings.meganeX8K.disableEyeDecreaseFov},
+				{"bluetoothDevice", defaultSettings.meganeX8K.bluetoothDevice},
+				{"directMode", defaultSettings.meganeX8K.directMode},
 				{"hiddenArea", {
 					{"enable", defaultSettings.meganeX8K.hiddenArea.enable},
 					{"testMode", defaultSettings.meganeX8K.hiddenArea.testMode},
@@ -184,25 +313,103 @@ void ConfigLoader::WriteInfo(){
 					{"radiusBottomInner", defaultSettings.meganeX8K.hiddenArea.radiusBottomInner},
 					{"radiusBottomOuter", defaultSettings.meganeX8K.hiddenArea.radiusBottomOuter},
 				}},
+				{"stationaryDimming", {
+					{"enable", defaultSettings.meganeX8K.stationaryDimming.enable},
+					{"movementThreshold", defaultSettings.meganeX8K.stationaryDimming.movementThreshold},
+					{"movementTime", defaultSettings.meganeX8K.stationaryDimming.movementTime},
+					{"dimBrightnessPercent", defaultSettings.meganeX8K.stationaryDimming.dimBrightnessPercent},
+					{"dimSeconds", defaultSettings.meganeX8K.stationaryDimming.dimSeconds},
+					{"brightenSeconds", defaultSettings.meganeX8K.stationaryDimming.brightenSeconds},
+				}},
 			}},
+			{"customShader", {
+				{"enable", defaultSettings.customShader.enable},
+				{"enableForMeganeX8K", defaultSettings.customShader.enableForMeganeX8K},
+				{"enableForOther", defaultSettings.customShader.enableForOther},
+				{"contrast", defaultSettings.customShader.contrast},
+				{"contrastMidpoint", defaultSettings.customShader.contrastMidpoint},
+				{"contrastLinear", defaultSettings.customShader.contrastLinear},
+				{"contrastPerEye", defaultSettings.customShader.contrastPerEye},
+				{"contrastPerEyeLinear", defaultSettings.customShader.contrastPerEyeLinear},
+				{"contrastLeft", defaultSettings.customShader.contrastLeft},
+				{"contrastMidpointLeft", defaultSettings.customShader.contrastMidpointLeft},
+				{"contrastRight", defaultSettings.customShader.contrastRight},
+				{"contrastMidpointRight", defaultSettings.customShader.contrastMidpointRight},
+				{"chroma", defaultSettings.customShader.chroma},
+				{"gamma", defaultSettings.customShader.gamma},
+				{"subpixelShift", defaultSettings.customShader.subpixelShift},
+				{"disableMuraCorrection", defaultSettings.customShader.disableMuraCorrection},
+				{"disableBlackLevels", defaultSettings.customShader.disableBlackLevels},
+				{"srgbColorCorrection", defaultSettings.customShader.srgbColorCorrection},
+				{"srgbColorCorrectionMatrix", defaultSettings.customShader.srgbColorCorrectionMatrix},
+				{"lensColorCorrection", defaultSettings.customShader.lensColorCorrection},
+				{"dither10Bit", defaultSettings.customShader.dither10Bit},
+			}},
+			{"forceTracking", defaultSettings.forceTracking},
 			// {"watchDistortionProfiles", defaultSettings.watchDistortionProfiles}
 		}},
-		// eventually these will have the full distortion data in them
-		{"builtInDistortionProfiles", {
-			{"MeganeX8K Default", emptyObject},
-			{"MeganeX8K Original", emptyObject},
-		}},
+		{"builtInDistortionProfiles", emptyObject},
 		{"resolution", {
+			{"fovX", info.renderFovX},
+			{"fovY", info.renderFovY},
+			{"fovMaxX", info.renderFovMaxX},
+			{"fovMaxY", info.renderFovMaxY},
 			{"renderResolution1To1X", info.renderResolution1To1X},
 			{"renderResolution1To1Y", info.renderResolution1To1Y},
 			{"renderResolution1To1Percent", info.renderResolution1To1Percent},
 			{"renderResolution100PercentX", info.renderResolution100PercentX},
 			{"renderResolution100PercentY", info.renderResolution100PercentY},
 		}},
+		{"connectedHeadset", (int)info.connectedHeadset},
+		{"debugLog", info.debugLog},
+		{"driverResources", info.driverResources},
+		{"steamvrResources", info.steamvrResources},
 		{"driverVersion", driverVersion}
 	};
+	ordered_json& distortionProfilesJson = data["builtInDistortionProfiles"];
+	for(auto profilePair : builtInDistortionProfiles){
+		auto profile = profilePair.second;
+		ordered_json profileJson = {
+			{"device", profile.device},
+			{"description", profile.description},
+			{"author", profile.author},
+			{"creationDate", profile.creationDate},
+			{"type", profile.type},
+			{"distortions", profile.distortions},
+			{"distortionsRed", profile.distortionsRed},
+			{"distortionsBlue", profile.distortionsBlue},
+			{"smoothAmount", profile.smoothAmount},
+		};
+		distortionProfilesJson[profile.name] = profileJson;
+	}
 	infoFile << data.dump(1, '\t');
 	infoFile.close();
+}
+
+void ConfigLoader::ReadInfo(){
+	std::string infoPath = GetConfigFolder() + "info.json";
+	std::ifstream infoFile(infoPath);
+	if(!infoFile.is_open()){
+		DriverLog("Failed to open info.json for reading: %d", GetLastError());
+		return;
+	}
+	try{
+		std::lock_guard<std::mutex> lock(driverConfigLock);
+		json data = json::parse(infoFile, nullptr, true, true);
+		if(data["driverResources"].is_string()){
+			info.driverResources = data["driverResources"].get<std::string>();
+		}
+		if(data["steamvrResources"].is_string()){
+			info.steamvrResources = data["steamvrResources"].get<std::string>();
+		}
+		if(data["connectedHeadset"].is_number()){
+			info.connectedHeadset = (HeadsetType)data["connectedHeadset"].get<int>();
+		}
+		info.hasBeenUpdated = true; 
+	}catch(const std::exception& e){
+		DriverLog("Failed to parse info.json: %s", e.what());
+		return;
+	}
 }
 
 // void ConfigLoader::WriteInfoThread(){
@@ -222,7 +429,7 @@ void ConfigLoader::WatcherThread(){
 	}
 	while(started){
 		DWORD bytesReturned;
-		char buffer[1024];
+		char buffer[1024]{};
 		FILE_NOTIFY_INFORMATION* pNotify;
 		BOOL success = ReadDirectoryChangesW(hDir, buffer, sizeof(buffer), FALSE, FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME, &bytesReturned, NULL, NULL);
 		if(!success){
@@ -230,9 +437,11 @@ void ConfigLoader::WatcherThread(){
 			break;
 		}
 		pNotify = (FILE_NOTIFY_INFORMATION*)buffer;
+		bool hasReloadedConfig = false;
+		bool hasReloadedInfo = false;
 		do{
 			std::wstring fileName(pNotify->FileName, pNotify->FileNameLength / sizeof(wchar_t));
-			if(fileName == L"settings.json" && (pNotify->Action == FILE_ACTION_MODIFIED || pNotify->Action == FILE_ACTION_ADDED || pNotify->Action == FILE_ACTION_RENAMED_NEW_NAME)){
+			if(!hasReloadedConfig && fileName == L"settings.json" && (pNotify->Action == FILE_ACTION_MODIFIED || pNotify->Action == FILE_ACTION_ADDED || pNotify->Action == FILE_ACTION_RENAMED_NEW_NAME)){
 				DriverLog("Config file changed, reloading...");
 				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 				while(driverConfig.hasBeenUpdated){
@@ -240,7 +449,13 @@ void ConfigLoader::WatcherThread(){
 					std::this_thread::sleep_for(std::chrono::milliseconds(10)); 
 				}
 				ParseConfig();
-				break;
+				hasReloadedConfig = true;
+			}
+			if(watchInfo && !hasReloadedInfo && fileName == L"info.json" && (pNotify->Action == FILE_ACTION_MODIFIED || pNotify->Action == FILE_ACTION_ADDED || pNotify->Action == FILE_ACTION_RENAMED_NEW_NAME)){
+				DriverLog("Info file changed, reloading...");
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+				ReadInfo();
+				hasReloadedInfo = true;
 			}
 			pNotify = (FILE_NOTIFY_INFORMATION*)((char*)pNotify + pNotify->NextEntryOffset);
 		}while(pNotify->NextEntryOffset != 0);
@@ -258,7 +473,7 @@ void ConfigLoader::WatcherThreadDistortions(){
 	}
 	while(started){
 		DWORD bytesReturned;
-		char buffer[1024];
+		char buffer[1024]{};
 		FILE_NOTIFY_INFORMATION* pNotify;
 		BOOL success = ReadDirectoryChangesW(hDir, buffer, sizeof(buffer), FALSE, FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME, &bytesReturned, NULL, NULL);
 		if(!success){
@@ -314,10 +529,14 @@ void ConfigLoader::Start(){
 			configFile.close();
 		}
 		
-		// start info thread
-		WriteInfo();
-		// std::thread infoThread(&ConfigLoader::WriteInfoThread, this);
-		// infoThread.detach();
+		if(watchInfo){
+			ReadInfo();
+		}else{
+			WriteInfo();
+			// start info thread
+			// std::thread infoThread(&ConfigLoader::WriteInfoThread, this);
+			// infoThread.detach();
+		}
 	}catch(const std::exception& e){
 		DriverLog("Failed to create settings.json %s", e.what());
 	}

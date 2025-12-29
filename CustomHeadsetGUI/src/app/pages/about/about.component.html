@@ -5,7 +5,7 @@
     <span>&nbsp;:&nbsp;{{update.currentVersion}}&nbsp;</span>
     @if(update.updateAvailable){
     <a (click)="openExternal(update.url)" href="javascript:;">
-        <span i18n>New version available!</span>
+        <span i18n>New version available</span><mat-icon class="warn-color" style="vertical-align: middle;">priority_high</mat-icon>
     </a>
     }@else{
     @if(!checking() && update.fetchSuccess){
@@ -22,23 +22,54 @@
     }
 </p>
 <p>
-    <span i18n>driver version</span>
+    <span i18n>installed driver version</span>
     @if(sds.driverInstalled();as verison){
     @if(aus.updateInfo();as updateInfo){
     <span>&nbsp;:&nbsp;{{verison}}</span>
+    <span>&nbsp;&nbsp;</span>
+    <button mat-stroked-button (click)="uninstallDriver()" [disabled]="sds.installingDriver()">
+        <span i18n>Uninstall Driver</span>
+    </button>
     @if(updateInfo.installAvailable){
-    <span>
-        &nbsp;&nbsp;</span>
+    <span>&nbsp;&nbsp;</span>
     <button mat-stroked-button (click)="installDriver()" [disabled]="sds.installingDriver()">
         <span i18n>Install {{updateInfo.currentVersion}}</span>
     </button>
+    <mat-icon class="warn-color">priority_high</mat-icon>
     }
     }
     }@else {
     <span>
         &nbsp;:&nbsp;</span>
     <span i18n>Not installed</span>
+    <span>&nbsp;&nbsp;</span>
+    <button mat-stroked-button (click)="installDriver()" [disabled]="sds.installingDriver()">
+        <span i18n>Install</span>
+    </button>
+    <mat-icon class="warn-color">priority_high</mat-icon>
     }
+</p>
+<p>
+    <span i18n>last run driver version</span>
+    @if(dis.values();as info){
+    @if(aus.updateInfo();as updateInfo){
+    <span>&nbsp;:&nbsp;{{info.driverVersion}}</span>
+    <span>&nbsp;&nbsp;</span>
+    <button mat-stroked-button (click)="installDriver()" [disabled]="sds.installingDriver()">
+        <span i18n>Re-Install Driver</span>
+    </button>
+    }
+    }@else {
+    <span>
+        &nbsp;:&nbsp;</span>
+    <span i18n>Not installed</span>
+    }
+</p>
+<p>
+    <span class="wrapped-block" i18n>
+        Restarting the compositor can fix some issues and allows changing various settings like refresh rate without restarting SteamVR or the game. 
+    </span>
+    <button mat-stroked-button (click)="sds.restartCompositor()"><span i18n>Restart Compositor</span></button>
 </p>
 <p>
     <a (click)="openExternal('https://github.com/sboys3/CustomHeadsetOpenVR')" href="javascript:;">
